@@ -656,7 +656,7 @@ lcreat(char* str)
     lpend = lpbuf + BUFBIG;
 
     if (str == NULL)
-        return -1;
+        return (lfd = 1);	/* back to the terminal (was left on the closed save file) */
 
 #ifdef O_BINARY
     lfd = open(str, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0666);

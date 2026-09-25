@@ -91,6 +91,6 @@ parts.append('<h2 id="h-version">About this version</h2><ul>'
              '<li>Based on <strong>RL_M 26.4.0</strong> (Larn 12.x, maintained by Gibbon), commit 12cefcd.</li>'
              '<li>Original source: <a href="https://github.com/atsb/RL_M/tree/12cefcd" target="_blank" rel="noopener">atsb/RL_M, commit 12cefcd</a> (The Noah Licence: free, non-commercial).</li>'
              '<li>Our changes (port, auto-explore, command menu, inventory, web build): '
-             '<a href="https://github.com/memmaker/RL_M/compare/12cefcd...master" target="_blank" rel="noopener">memmaker/RL_M</a></li>'
+             '<a href="https://github.com/memmaker/larn/compare/12cefcd...master" target="_blank" rel="noopener">memmaker/larn</a></li>'
              '<li>Tiles: the Amiga Larn set from <a href="https://larn.org/" target="_blank" rel="noopener">larn.org</a> (github.com/primeau/Larn, MIT).</li></ul>')
 print('\n'.join(parts))
