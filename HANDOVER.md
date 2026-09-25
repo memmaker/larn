@@ -39,4 +39,16 @@
 - Water, shore, lava and cooled lava have no Amiga tiles: coloured letters.
 - The player tile is the Amiga original (a green block). The Desktop icon uses the Eye of Larn.
 - Digit keys are movement at the command prompt (upstream), so repeat counts don't work.
-- No web port and no sound yet (RVIP steps 6b/7).
+
+## Web (RVIP step 7)
+
+- Live: https://ruzzoli.de/roguelikes/larn/ · changes: https://github.com/memmaker/larn
+  (remote `memmaker`), base atsb/RL_M @ 12cefcd.
+- `sh web/build.sh` → `web/dist`, `sh web/deploy.sh`. Template: Umoria's web files.
+- `port/be_web.c` replaces `be_x11.c`. Data (`larnfiles/`) preloaded to `/larn/data`; the
+  game's cwd is the IDBFS mount `/larn/save` with symlinks to the data files, like `play.sh`.
+- Saves: autosave (`savegame()`) at the command prompt on start, every 2 min and when the tab
+  is hidden; `be_end()` (from `clearvt100()`) deletes the save unless the player pressed `S`.
+- Sound: `SOUND("event")` calls in the game (larnfunc.h), Dubtrain samples via `web/sounds.py`.
+- Upstream bug fixed on the way: `lcreat(NULL)` didn't send output back to the terminal, so
+  after any mid-game save (checkpoint, autosave) the screen stopped updating.
