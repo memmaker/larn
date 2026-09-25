@@ -16,7 +16,7 @@ emcc -O2 -std=gnu99 -fcommon -DLARN_X11 -I. -Iport -w \
 	-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,HEAPU8,addRunDependency,removeRunDependency \
 	-sFORCE_FILESYSTEM -lidbfs.js -sENVIRONMENT=web \
 	--preload-file larnfiles@/larn/data
-cp web/index.html web/larn.js port/tiles.png "$OUT/"
+cp web/index.html web/rvip-wm.js web/larn.js port/tiles.png "$OUT/"
 # sound effects (events raised by SOUND() in the game) and the town music
 mkdir -p "$OUT/sound" "$OUT/music"
 python3 web/sounds.py "$OUT/sound"
