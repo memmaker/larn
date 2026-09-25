@@ -319,3 +319,4 @@ int be_getkey(int wait)
         }
     }
 }
+void be_invfg(int y, const char *css) { }

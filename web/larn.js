@@ -224,18 +224,6 @@
 		document.querySelector('#t-vis .body').style.fontSize = L.font.vis + 'px';
 		saveLayout();
 	}
-	/* inventory lines coloured by item kind (Angband colours, rvip-wm.js) */
-	function invColors() {
-		var T = panes[P_INV];
-		if (!T) return;
-		T.rowFg = T.rowFg || [];
-		for (var y = 0; y < T.rows; y++) {
-			var s = '';
-			for (var x = 0; x < T.cols; x++) s += String.fromCharCode(T.ch_[y * T.cols + x] & 0xff);
-			var c = /^\s*[a-zA-Z][)\-] /.test(s) ? RvipWM.itemColor(s.replace(/^\s*[a-zA-Z][)\-] /, '')) : null;
-			if (c !== (T.rowFg[y] || null)) { T.rowFg[y] = c; for (x = 0; x < T.cols; x++) draw(P_INV, y, x); }
-		}
-	}
 	function applyDom() { if (wm) wm.apply(); }
 	function makeWM() {
 		var s = defaultLayout().split, A = areaSize();
@@ -334,7 +322,6 @@
 			fit(P_POP);
 		},
 		flush: function (level, hy, hx) {
-			invColors();
 			var town = level === 0;
 			if (level < 0) return;                  /* no living character */
 			if (hy !== hero.y || hx !== hero.x) { hero.y = hy; hero.x = hx; scrollMap(level !== audio.level); }
@@ -344,6 +331,12 @@
 			ln.lastCur = cur.p >= 0 ? { p: cur.p, y: cur.y, x: cur.x } : null;
 			audio.level = level;
 			if (!!town !== audio.town) { audio.town = !!town; updateMusic(); }
+		},
+		invfg: function (y, c) {   /* the game's colour for an inventory row */
+			var T = panes[P_INV];
+			if (!T || y >= T.rows) return;
+			(T.rowFg = T.rowFg || [])[y] = c;
+			for (var x = 0; x < T.cols; x++) draw(P_INV, y, x);
 		},
 		vis: function (s) { RvipWM.visible(document.querySelector('#t-vis .body'), s); },
 		key: function () { return events.length ? events.shift() : -1; },

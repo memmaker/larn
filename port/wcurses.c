@@ -216,8 +216,21 @@ static void hist(int row)
 {
     WINDOW *p = pn[P_MSG];
     int y, x, n = COLS;
+    static char prev[512];
+    static int reps;
+    char r[512], sfx[16];
     while (n > 0 && (at(stdscr, row, n - 1) & A_CHARTEXT) == ' ') n--;
     if (n == 0) return;
+    for (x = 0; x < n && x < 511; x++) r[x] = at(stdscr, row, x) & A_CHARTEXT;
+    r[x] = 0;
+    /* a repeat of the newest line: "line (xN)" in its row */
+    if (!strcmp(r, prev)) {
+        snprintf(sfx, sizeof sfx, " (x%d)", ++reps);
+        for (x = 0; sfx[x] && n + x < p->maxx; x++) set(p, HIST - 1, n + x, (unsigned char)sfx[x]);
+        return;
+    }
+    reps = 1;
+    strcpy(prev, r);
     for (y = 0; y < HIST - 1; y++)
         for (x = 0; x < p->maxx; x++) set(p, y, x, at(p, y + 1, x));
     for (x = 0; x < p->maxx; x++) set(p, HIST - 1, x, x < n ? at(stdscr, row, x) : ' ');

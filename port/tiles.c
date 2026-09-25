@@ -111,6 +111,30 @@ void item_name(char *b, size_t n, int i)
     if (c[WEAR] == i || c[SHIELD] == i) snprintf(b + k, n - k, " (worn)");
 }
 
+/* Angband's colour for an object id (RVIP W0: colours come from the game) */
+const char *wc_css(int o)
+{
+    switch (o) {
+    case OPOTION: case OWATER: return "#40a0ff";
+    case OSCROLL: return "#ffffff";
+    case OBOOK: return "#60e0e0";
+    case OAMULET: case OORBOFDRAGON: case OSPIRITSCARAB: case OCUBEofUNDEAD: case ONOTHEFT: case OSPHTAILSMAN: return "#ff9000";
+    case ORING: case OSTUDLEATHER: case OSPLINT: case OPLATEARMOR: case OSSPLATE: case OSHIELD: case OELVENCHAIN:
+    case OPLATE: case OCHAIN: case OLEATHER: return "#a07040";
+    case ORINGOFEXTRA: case OREGENRING: case OPROTRING: case OENERGYRING: case ODEXRING: case OSTRRING:
+    case OCLEVERRING: case ODAMRING: case OBELT: return "#ff4040";
+    case OHAMMER: case OSWORD: case O2SWORD: case OHSWORD: case OSPEAR: case ODAGGER: case OBATTLEAXE:
+    case OLONGSWORD: case OLANCE: case OVORPAL: case OSLAYER: return "#b0b0b8";
+    case OWWAND: return "#40d040";
+    case OPSTAFF: return "#d09050";
+    case OCOOKIE: return "#d09050";
+    case OBRASSLAMP: return "#ffff90";
+    case OGOLDPILE: case OMAXGOLD: case OKGOLD: case ODGOLD: return "#ffe040";
+    case ODIAMOND: case ORUBY: case OEMERALD: case OSAPPHIRE: case OLARNEYE: return "#ff60ff";
+    }
+    return "";
+}
+
 void wc_inv(WINDOW *w)
 {
     char b[160];
@@ -121,6 +145,8 @@ void wc_inv(WINDOW *w)
         if (!iven[i]) continue;
         item_name(b, sizeof b, i);
         line(w, c[WIELD] == i || c[WEAR] == i || c[SHIELD] == i ? A_BOLD : 0, b);
+        be_invfg(ln - 1, wc_css(iven[i]));
     }
+    for (i = ln; i < w->maxy; i++) be_invfg(i, "");
     while (ln < w->maxy) line(w, 0, "");
 }

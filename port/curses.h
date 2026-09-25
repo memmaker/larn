@@ -118,5 +118,7 @@ void be_sound(const char *event);       /* web: play a sound event */
 void be_end(void);                      /* web: the game is over (or saved) */
 int tile_for(int y, int x, chtype ch);  /* tiles.c: -1 = draw as text */
 void wc_status(WINDOW *);               /* tiles.c: Status pane */
+const char *wc_css(int obj);             /* tiles.c: an object's colour */
+void be_invfg(int y, const char *css);   /* inventory row colour */
 void wc_inv(WINDOW *);                  /* tiles.c: Inventory pane */
 #endif

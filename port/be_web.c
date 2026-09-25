@@ -31,6 +31,12 @@ void be_sound(const char *event) { js_sound(event); }
 /* Visible window (RVIP 5b): monsters in sight (Larn shows only the cells
  * around the player: 1, 2 with the Sword of Slashing, 3 with awareness) and
  * the objects drawn on the map */
+EM_JS(void, js_invfg, (int y, const char *c), { Module.ln.invfg(y, UTF8ToString(c)); });
+void be_invfg(int y, const char *css)
+{
+    static const char *last[64];
+    if (y < 64 && last[y] != css) { last[y] = css; js_invfg(y, css); }
+}
 EM_JS(void, js_vis, (const char *s), { if (Module.ln.vis) Module.ln.vis(UTF8ToString(s)); });
 static void send_visible(void)
 {
@@ -45,7 +51,7 @@ static void send_visible(void)
         for (x = 0; x < MAXX; x++)
             if ((know[x][y] & KNOWHERE) && item[x][y] && objnamelist[item[x][y]] > ' ' && n < 3900
                 && !strchr("#.", objnamelist[item[x][y]]))
-                n += snprintf(buf + n, sizeof buf - n, "I%c%s\n", objnamelist[item[x][y]], objectname[item[x][y]]);
+                n += snprintf(buf + n, sizeof buf - n, "I%c%s\t%s\n", objnamelist[item[x][y]], objectname[item[x][y]], wc_css(item[x][y]));
     buf[n] = 0;
     js_vis(buf);
 }
