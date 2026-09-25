@@ -318,6 +318,9 @@ t_setup(int count)
 {
     int y;
 
+#ifdef LARN_X11
+    wc_overlay();
+#endif
     for (y = 1; y <= count; y++) {
         move(y - 1, 0);
         clrtoeol();
@@ -495,6 +498,7 @@ drop_object (int k)
   item[playerx][playery] = itm;
   iarg[playerx][playery] = ivenarg[k];
   lprcat ("\n  You drop: ");
+  SOUND ("drop");
   inventoryline_print (k);			/* show what item you dropped */
   know[playerx][playery] = 0;
   iven[k] = 0;

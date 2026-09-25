@@ -787,6 +787,7 @@ died(int x)
         return; /* only case where died() returns */
     }
 
+    SOUND("death");
     cursors();
     lflush();
     refresh();

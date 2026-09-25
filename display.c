@@ -132,6 +132,17 @@ static struct bot_side_def bot_data[] = {
   {WTW, "Wall-Walk"}
 };
 
+#ifdef LARN_X11
+/* Status pane (port/tiles.c): name of active effect i, NULL past the end */
+const char *
+bot_effect(int i)
+{
+    if (i >= (int)(sizeof bot_data / sizeof bot_data[0]))
+        return NULL;
+    return c[bot_data[i].typ] ? bot_data[i].string : "";
+}
+#endif
+
 /*
 *  subroutine to draw only a section of the screen
 *  only the top section of the screen is updated.  If entire lines are being
@@ -282,6 +293,10 @@ drawscreen(void)
         statusmessage_draw_right_panel();
         statusmessage_draw_lines();
     }
+
+#ifdef LARN_X11
+    wc_dungeon();
+#endif
 
     /* for limited screen drawing */
     d_xmin = d_ymin = 0;

@@ -64,6 +64,12 @@
 #define resetscroll() enable_scroll=0
 
 /* macro to clear the screen and home the cursor */
+/* RVIP port: sound events for the web build (port/be_web.c plays them) */
+#ifdef LARN_X11
+#define SOUND(e) be_sound (e)
+#else
+#define SOUND(e) ((void) 0)
+#endif
 #define screen_clear() do { clear(); cursor(1,1); } while(0)
 
 /* macro to clear to end of line */

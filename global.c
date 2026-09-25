@@ -136,6 +136,7 @@ raiseexperience(unsigned long x)
     {
         tmp = (c[CONSTITUTION] - c[HARDGAME]) >> 1;
         c[LEVEL]++;
+        SOUND("level");
         raisemhp((int)(rnd(3) + rnd((tmp > 0) ? tmp : 1)));
         raisemspells((int)rund(3));
         if (c[LEVEL] < 7 - c[HARDGAME])

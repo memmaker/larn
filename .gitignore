@@ -76,3 +76,7 @@ x64/Release/RCa25752
 larn
 /x64
 /bin
+larn-x11
+port/obj/
+save/
+web/dist/

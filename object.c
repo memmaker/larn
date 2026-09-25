@@ -551,6 +551,7 @@ void
 oteleport (int err)
 {
   int tmp;
+  SOUND ("teleport");
   if (err)
 	if (rnd (151) < 3)
 	{
@@ -651,6 +652,7 @@ quaffpotion(int pot, int set_known)
    */
   if (set_known)
     potionname[pot][0] = ' ';
+  SOUND ("quaff");
 
   switch (pot)
   {
@@ -987,6 +989,7 @@ read_scroll (int typ)
   if (typ < 0 || typ >= MAXSCROLL)
     return;			/* be sure we are within bounds */
   scrollname[typ][0] = ' ';
+  SOUND ("study");
   switch (typ)
     {
     case 0:
@@ -1323,6 +1326,7 @@ ocookie(void)
 
         case 'e':
             lprcat("eat\nThe cookie tasted good.");
+            SOUND("eat");
             forget();
 
             if (c[BLINDCOUNT])
@@ -1377,6 +1381,7 @@ ogold (int arg)
   else if (arg == ODGOLD)
     i *= 10;
   lprintf ("\nIt is worth %d!", (int) i);
+  SOUND ("money1");
   c[GOLD] += i;
   bottomgold ();
   item[playerx][playery] = know[playerx][playery] = 0;	/* destroy gold    */

@@ -226,6 +226,9 @@ setupvt100 (void)
 void
 clearvt100 (void)
 {
+#ifdef LARN_X11
+  be_end ();			/* web: the game is over (or saved) */
+#endif
   cleanup_term();
 
   resetscroll ();
@@ -426,6 +429,9 @@ lprc(char ch)
                 scrline = 21;
             move(scrline - 1, 0);
             clrtoeol();
+#ifdef LARN_X11
+            wc_msgnew();
+#endif
             return;
         }
         else {
@@ -1037,6 +1043,9 @@ void
 cl_up (int x, int y)
 {
   int i;
+#ifdef LARN_X11
+  wc_overlay();
+#endif
   for (i = 1; i <= y; i++)
     {
         move (i-1,0);

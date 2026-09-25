@@ -113,6 +113,7 @@ cast (void)
   lprcat (eys);
 
   --c[SPELLS];
+  SOUND ("cast_spell");
 
   while ((a = ttgetch ()) == 'I')
     {

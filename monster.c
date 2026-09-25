@@ -300,6 +300,7 @@ hitmonster (int x, int y)
   if ((rnd (20) < tmp - c[HARDGAME]) || (rnd (71) < 5))	/* need at least random chance to hit */
     {
       lprcat ("\nYou hit");
+      SOUND ("hit");
       flag = 1;
       damag = fullhit (1);
       if (damag < 9999)
@@ -308,6 +309,7 @@ hitmonster (int x, int y)
   else
     {
       lprcat ("\nYou missed");
+      SOUND ("miss");
       flag = 0;
     }
   lprcat (" the ");
@@ -399,6 +401,7 @@ hitm (int x, int y, int amt)
       lprintf ("\nThe");
       lprintf(" %s ",lastmonst);
       lprintf("died!\n");
+      SOUND ("kill");
       raiseexperience (monster[monst].experience);
       amt = monster[monst].gold;
       if (amt > 0)
@@ -485,6 +488,7 @@ hitplayer (int x, int y)
       lprintf ("\nThe");
       lprintf(" %s ",lastmonst);
       lprintf("hit you");
+      SOUND ("mon_hit");
       tmp = 1;
       if ((dam -= c[AC]) < 0)
 	dam = 0;

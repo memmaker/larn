@@ -22,6 +22,25 @@
 #include "nap.h"
 #include <time.h>
 
+#ifdef LARN_X11
+/* RVIP port: sleep instead of spinning (the command loop naps between key
+ * polls, so the busy loop kept one core at 100% while idle) */
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+void
+nap(int milliseconds)
+{
+    emscripten_sleep((unsigned)milliseconds);
+}
+#else
+#include <unistd.h>
+void
+nap(int milliseconds)
+{
+    usleep((useconds_t)milliseconds * 1000);
+}
+#endif
+#else
 void
 nap(int milliseconds)
 {
@@ -33,3 +52,4 @@ nap(int milliseconds)
         now = clock();
     } while ((clock_t)(now - start) < ticks);
 }
+#endif

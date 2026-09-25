@@ -551,7 +551,10 @@ up_stairs (void)
     lprcat ("\nI see no way to go up here!");
 
   else
-    act_up_stairs ();
+    {
+      SOUND ("stairs_up");
+      act_up_stairs ();
+    }
 }
 
 
@@ -575,7 +578,10 @@ down_stairs (void)
     lprcat ("\nI see no way to go down here!");
 
   else
-    act_down_stairs ();
+    {
+      SOUND ("stairs_down");
+      act_down_stairs ();
+    }
 }
 
 

@@ -316,7 +316,9 @@ yylex(void)
             if (ch == -1)
                 return 0;
 
+#ifndef LARN_X11 /* the port queues keys for item actions: keep them */
             while (ttgetch_noblock() != -1) { }
+#endif
 
             cc = (char)ch;
         }

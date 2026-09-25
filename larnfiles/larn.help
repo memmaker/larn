@@ -35,14 +35,14 @@ k  move up                 K  run up                   ,  pick up item
 l  move right              L  run right                :  look at object you
 n  move southeast          N  run southeast               are standing on
                            O  open a door or chest     .  stay here
-p  pray at an altar        P  give tax status          m  move without picking
-q  quaff a potion          Q  quit the game               up an object
-r  read a scroll           R  remove gems from throne  @  toggle auto-pickup
+p  pray at an altar        P  give tax status          x  auto-explore the level
+q  quaff a potion          Q  quit the game            Enter  command menu
+r  read a scroll           R  remove gems from throne
 s  sit on a throne         S  save the game            /  identify objects in
 t  tidy up at a fountain   T  take off armor              the game
-u  move northeast          U  run northeast
-v  print program version
-w  wield a weapon          W  wear armor
+u  move northeast          U  run northeast            < > off the stairs: walk
+v  print program version                                  to the nearest known
+w  wield a weapon          W  wear armor                  one and take it
 y  move northwest          Y  run northwest            ^L redraw the screen
                 [7mSpecial Notes[m
 

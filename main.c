@@ -45,6 +45,10 @@
 				   not being called after process commandline */	
 
 static void parse (void);
+#ifdef LARN_X11
+int rvip_command (int);
+int rvip_whatitem (const char *);
+#endif
 
 static void randmonst (void);
 
@@ -503,6 +507,11 @@ parse (void)
   for (;;)
     {
       k = yylex ();
+#ifdef LARN_X11
+	  k = rvip_command (k);	/* explore, stair walking, Enter menu, inventory */
+	  if (k == -1)
+	    return;		/* the turn was used */
+#endif
 	  if (k == 0) {
 
 		  /* no input this tick, continue with main loop */
@@ -1043,6 +1052,7 @@ wield(void)
 
 		cursors();
 		lprintf("\nYou wield %s.", objectname[obj]);
+		SOUND("wield");
 		bottomline();
 		return;
 	}
@@ -1108,6 +1118,7 @@ wear(void)
 			c[WEAR] = i - 'a';
 			cursors();
 			lprintf("\nYou equip %s.", objectname[obj]);
+			SOUND("wield");
 			bottomline();
 			return;
 
@@ -1131,6 +1142,7 @@ wear(void)
 			c[SHIELD] = i - 'a';
 			cursors();
 			lprintf("\nYou equip %s.", objectname[obj]);
+			SOUND("wield");
 			bottomline();
 			return;
 
@@ -1377,6 +1389,9 @@ whatitem (const char *str)
 
   cursors ();
   lprintf ("\nWhat do you want to %s [* for all] ? ", str);
+#ifdef LARN_X11
+  i = rvip_whatitem (str);	/* the list with a cursor */
+#endif
   while (i > 'z'
 	 || (i < 'a' && i != '-' && i != '*' && i != '\33' && i != '.'))
     i = ttgetch ();

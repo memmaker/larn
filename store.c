@@ -353,6 +353,7 @@ dndstore (void)
 		  scrollname[dnd_item[i].arg][0] = ' ';
 		}
 	      c[GOLD] -= dnd_item[i].price * 10;
+	      SOUND ("store5");
 	      dnd_item[i].qty--;
 	      take (dnd_item[i].obj, dnd_item[i].arg);
 	      if (dnd_item[i].qty == 0)
