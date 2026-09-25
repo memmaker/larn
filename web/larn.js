@@ -331,7 +331,8 @@
 			for (var x = 0; x < T.cols; x++) draw(P_INV, y, x);
 		},
 		vis: function (s) { RvipWM.visible(document.querySelector('#t-vis .body'), s); },
-		key: function () { return events.length ? events.shift() : -1; },
+		key: function (atCmd) { RvipWM.prompt.wait(atCmd); return events.length ? events.shift() : -1; },
+		prompt: function (s) { RvipWM.prompt.text(s); },
 		requestSave: function () { saveReq = true; },   /* also for testing */
 		wantSave: function () {
 			if (!saveReq || !running) return 0;

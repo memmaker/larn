@@ -320,3 +320,5 @@ int be_getkey(int wait)
     }
 }
 void be_invfg(int y, const char *css) { }
+
+void be_prompt(const char *s) { }   /* web only: the prompt line over the map */

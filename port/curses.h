@@ -110,7 +110,8 @@ void wc_msgnew(void);       /* a new message line starts (the scroll ring) */
 enum { P_MAP, P_STATUS, P_MSG, P_INV, P_POP, NPANES };
 void be_init(int pane, int cols, int rows);
 void be_put(int pane, int y, int x, chtype ch, int tile);
-void be_cursor(int pane, int y, int x); /* pane -1: no cursor */
+void be_cursor(int pane, int y, int x);
+void be_prompt(const char *s);           /* live message row (rvip-wm.js prompt line) */ /* pane -1: no cursor */
 void be_popup(int rows, int cols);      /* 0: close */
 void be_flush(void);
 int be_getkey(int wait);                /* -1 when !wait and nothing queued */

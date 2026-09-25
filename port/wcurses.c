@@ -248,7 +248,11 @@ void wc_msgnew(void)
 static void msg_refresh(void)
 {
     int x;
+    char r[256];
     for (x = 0; x < COLS; x++) set(pn[P_MSG], HIST, x, live >= 0 ? at(stdscr, live, x) : ' ');
+    for (x = 0; x < COLS && x < 255; x++) r[x] = live >= 0 ? at(stdscr, live, x) & A_CHARTEXT : ' ';
+    r[x] = 0;
+    be_prompt(r);                   /* the prompt line over the map */
 }
 
 /* Pop-up: bounding box of the text that isn't the game screen underneath. */

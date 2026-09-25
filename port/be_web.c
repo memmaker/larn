@@ -17,7 +17,9 @@ EM_JS(void, js_put, (int p, int y, int x, int ch, int t), { Module.ln.put(p, y, 
 EM_JS(void, js_cursor, (int p, int y, int x), { Module.ln.cursor(p, y, x); });
 EM_JS(void, js_popup, (int r, int c), { Module.ln.popup(r, c); });
 EM_JS(void, js_flush, (int lvl, int hy, int hx), { Module.ln.flush(lvl, hy, hx); });
-EM_JS(int, js_key, (void), { return Module.ln.key(); });
+EM_JS(int, js_key, (int at_cmd), { return Module.ln.key(at_cmd); });
+EM_JS(void, js_prompt, (const char *s), { Module.ln.prompt(UTF8ToString(s)); });
+void be_prompt(const char *s) { js_prompt(s); }
 EM_JS(int, js_want_save, (void), { return Module.ln.wantSave(); });
 EM_JS(void, js_sound, (const char *s), { Module.ln.sound(UTF8ToString(s)); });
 EM_JS(void, js_end, (int saved), { Module.ln.end(saved); });
@@ -66,7 +68,7 @@ void be_flush(void)
 int be_getkey(int wait)
 {
     for (;;) {
-        int k = js_key();
+        int k = js_key(!wait);          /* ponytail: the command prompt is the one that polls */
         if (k >= 0) return k;
         if (!wait) { /* the command prompt polls: a safe moment to save */
             if (c[HP] > 0 && js_want_save()) savegame(savefilename);
