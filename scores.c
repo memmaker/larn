@@ -812,6 +812,15 @@ invalid:
         x = -x;
     }
 
+#ifdef __EMSCRIPTEN__
+    {   /* RVIP run beacon; 257 = suspended (saved), not a finished run */
+        void be_run_end(const char *ev, const char *killer);
+        if (x == 300 || x == 256) be_run_end("quit", NULL);
+        else if (x == 263) be_run_end("win", NULL);
+        else if (x != 257) be_run_end("death", x < 256 ? monster[x].name : whydead[x - 256]);
+    }
+#endif
+
      /* for quick exit or saved game */
     if (x == 300 || x == 257)
     {
