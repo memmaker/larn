@@ -52,3 +52,9 @@
 - Sound: `SOUND("event")` calls in the game (larnfunc.h), Dubtrain samples via `web/sounds.py`.
 - Upstream bug fixed on the way: `lcreat(NULL)` didn't send output back to the terminal, so
   after any mid-game save (checkpoint, autosave) the screen stopped updating.
+- Prompt line (RVIP step 5 / W4, 2026-09-26): the live message row is shown in a
+  box over the map by `RvipWM.prompt` (rvip-wm.js). A key hides it only while
+  the game waits for a command, so a question stays up until answered.
+  Here: `be_prompt(r)` from `msg_refresh()` in `port/wcurses.c` (the `live` row
+  of stdscr); no command-prompt flag exists, so `port/be_web.c` passes `!wait`
+  (the command prompt is the caller that polls).
