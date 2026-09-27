@@ -13,6 +13,8 @@ for line in open(os.path.join(PACK, 'sound.cfg'), encoding='latin-1'):
         cfg[k.strip()] = v.split()
 os.makedirs(out, exist_ok=True)
 used = {e: cfg.get(e, []) for e in EVENTS}
+# DASP's 'miss' is a bow sample; Larn's miss is a melee swing (RVIP-Finetuning, Sound)
+used['miss'] = ['plc_miss_swish.wav']
 for files in used.values():
     for f in files:
         shutil.copy(os.path.join(PACK, f), out)

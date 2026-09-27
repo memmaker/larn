@@ -135,18 +135,33 @@ const char *wc_css(int o)
     return "";
 }
 
+int wc_objtile(int o)
+{
+    return o > 0 && o < (int)(sizeof obj_tile / sizeof obj_tile[0]) && obj_tile[o] >= 0 ? obj_tile[o] : -1;
+}
+
+int wc_montile(int m)
+{
+    return m > 0 && m < (int)(sizeof mon_tile / sizeof mon_tile[0]) ? mon_tile[m] : -1;
+}
+
+/* Rows "a)   name" with a tile set (the frontend puts the icon on cols 2-4),
+ * "a) ! name" in text mode (the item's own symbol) */
 void wc_inv(WINDOW *w)
 {
-    char b[160];
-    int i;
+    char b[160], n[160];
+    int i, icons = be_icons();
     ln = 0;
     line(w, A_BOLD, "Inventory");
     for (i = 0; i < MAXINVEN; i++) {
+        int t = wc_objtile(iven[i]);
         if (!iven[i]) continue;
-        item_name(b, sizeof b, i);
+        item_name(n, sizeof n, i);
+        if (icons && t >= 0) snprintf(b, sizeof b, "%.3s  %s", n, n + 3);
+        else snprintf(b, sizeof b, "%.3s%c %s", n, objnamelist[iven[i]], n + 3);
         line(w, c[WIELD] == i || c[WEAR] == i || c[SHIELD] == i ? A_BOLD : 0, b);
-        be_invfg(ln - 1, wc_css(iven[i]));
+        be_invfg(ln - 1, wc_css(iven[i]), icons ? t : -1);
     }
-    for (i = ln; i < w->maxy; i++) be_invfg(i, "");
+    for (i = ln; i < w->maxy; i++) be_invfg(i, "", -1);
     while (ln < w->maxy) line(w, 0, "");
 }

@@ -1,6 +1,6 @@
 /* RVIP additions for Larn, called from parse() (main.c) and whatitem():
  *   x        auto-explore: one step per turn over what the player knows
- *   < >      off the stairs: walk to the nearest known one, take it there
+ *   < >      off the stairs: walk to the nearest known one (press again to take it)
  *   Enter    floating menu of every command (from larn.help)
  *   i        inventory with a cursor and item menus
  *   item prompts ("quaff which?") show the list with a cursor */
@@ -13,6 +13,9 @@
 #include "../action.h"
 #include "../display.h"
 #include "curses.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #define MAXINVEN 26 /* inventory.c */
 #define ESC 27
@@ -151,10 +154,8 @@ static int auto_step(void)
     visited[level][playerx][playery] = 1;
     if (level != auto_level) return stop(NULL); /* new level */
     /* arrived ("You have found ..." is expected here) */
-    if (mode != 'x' && stairs_for(mode, item[playerx][playery])) {
-        auto_mode = 0;
-        return level == 0 && item[playerx][playery] == OENTRANCE ? 'E' : mode;
-    }
+    if (mode != 'x' && stairs_for(mode, item[playerx][playery]))
+        return stop(NULL); /* only walk there: the player takes them with the key again */
     if (wc_msgs != auto_msgs) return stop(NULL); /* something happened */
     if (hitflag) return stop(NULL);
     if (c[BLINDCOUNT] || c[CONFUSE]) return stop("\nYou are in no state to explore.");
@@ -249,6 +250,7 @@ static void load_cmds(void)
             else if (part[0] == '^' && strlen(part) == 2) k = CTRL(part[1]);
             else continue; /* "Enter", "< >": notes, not commands */
             if (k == 'x' && c3 == 2) continue;
+            if (strchr("hjklyubnHJKLYUBN", k)) continue; /* moves and runs: not menu material */
             last[c3] = cn[c3];
             cols[c3][cn[c3]].key = k;
             snprintf(cols[c3][cn[c3]].text, sizeof cols[c3][0].text, "%s", p);
@@ -271,7 +273,8 @@ static void key_name(char *b, int k)
 
 /* Draws rows[] as a list over the map (top left), row `cur` highlighted,
  * scrolled so it shows. Returns the first row shown. */
-static int draw_list(const char *title, char rows[][80], int n, int cur, int top)
+/* slot: the inventory slot per row, for the row's colour (NULL: none) */
+static int draw_list(const char *title, char rows[][80], int n, int cur, int top, const int *slot)
 {
     int i, w = title ? (int)strlen(title) : 0, shown = n < LIST_ROWS ? n : LIST_ROWS, y = 0;
     for (i = 0; i < n; i++)
@@ -281,6 +284,7 @@ static int draw_list(const char *title, char rows[][80], int n, int cur, int top
     for (i = 0; i < LIST_ROWS + 1; i++) {
         move(i, 0);
         clrtoeol();
+        wc_rowfg(stdscr, i, "");
     }
     if (title) {
         move(y++, 0);
@@ -290,6 +294,7 @@ static int draw_list(const char *title, char rows[][80], int n, int cur, int top
     }
     for (i = top; i < top + shown; i++) {
         int k;
+        if (slot) wc_rowfg(stdscr, y, wc_css(iven[slot[i]])); /* the Inventory pane's colours */
         move(y++, 0);
         attrset(i == cur ? A_STANDOUT : A_NORMAL);
         addstr(rows[i]);
@@ -300,7 +305,12 @@ static int draw_list(const char *title, char rows[][80], int n, int cur, int top
     return top;
 }
 
-static void close_list(void) { draws(0, MAXX, 0, MAXY); }
+static void close_list(void)
+{
+    int i;
+    for (i = 0; i < LIST_ROWS + 1; i++) wc_rowfg(stdscr, i, "");
+    draws(0, MAXX, 0, MAXY);
+}
 
 static int getkey(void)
 {
@@ -321,7 +331,7 @@ int cmd_menu(void)
     }
     wc_overlay();
     for (;;) {
-        top = draw_list(NULL, rows, ncmds, cur, top);
+        top = draw_list(NULL, rows, ncmds, cur, top, NULL);
         k = getkey();
         if (k == ESC || k == '0') break;
         if (k == '8') cur = (cur + ncmds - 1) % ncmds;
@@ -426,7 +436,7 @@ static int item_menu(int i)
     item_name(title, sizeof title, i);
     for (j = 0; j < n; j++) snprintf(rows[j], sizeof rows[j], " %c  %s", a[j].key, a[j].name);
     for (;;) {
-        draw_list(title + 3, rows, n, cur, 0);
+        draw_list(title + 3, rows, n, cur, 0, NULL);
         k = getkey();
         if (k == '8') cur = (cur + n - 1) % n;
         else if (k == '2') cur = (cur + 1) % n;
@@ -458,7 +468,7 @@ int inventory_browse(void)
             return 0;
         }
         if (cur >= n) cur = n - 1;
-        top = draw_list("Inventory: letter uses, Shift drops, Ctrl examines, Enter menu", rows, n, cur, top);
+        top = draw_list("Inventory: letter uses, Shift drops, Ctrl examines, Enter menu", rows, n, cur, top, slot);
         k = getkey();
         if (k == ESC || k == '0' || k == '.' || k == 'i') break;
         if (k == '8') { cur = (cur + n - 1) % n; continue; }
@@ -516,7 +526,7 @@ int rvip_whatitem(const char *verb)
     snprintf(title, sizeof title, "What do you want to %s? (Enter chooses, Esc)", verb);
     wc_overlay();
     for (;;) {
-        top = draw_list(title, rows, n, cur, top);
+        top = draw_list(title, rows, n, cur, top, slot);
         k = getkey();
         if (k == '8' && n) cur = (cur + n - 1) % n;
         else if (k == '2' && n) cur = (cur + 1) % n;
@@ -537,6 +547,9 @@ int rvip_whatitem(const char *verb)
 int rvip_command(int k)
 {
     if (k == 0) {
+#ifdef __EMSCRIPTEN__
+        if (auto_mode) emscripten_sleep(40); /* let the browser paint each step */
+#endif
         if (auto_mode) return auto_step();
         if (reopen == 1) {
             reopen = 0;
@@ -553,6 +566,7 @@ int rvip_command(int k)
         int o = item[playerx][playery];
         if (k == '<' ? o == OSTAIRSUP || o == OVOLUP : o == OSTAIRSDOWN || o == OVOLDOWN)
             return k; /* on them: as before */
+        if (o == OENTRANCE && stairs_for((char)k, o)) return 'E'; /* the dungeon entrance */
         return start((char)k);
     }
     return k;
