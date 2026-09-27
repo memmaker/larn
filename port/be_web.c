@@ -12,6 +12,7 @@
 
 int savegame(char *);  /* diag.c */
 
+static const char *rowfg_sent[64]; /* be_rowfg: colour last sent per pop-up row */
 EM_JS(void, js_init, (int p, int c, int r), { Module.ln.init(p, c, r); });
 EM_JS(void, js_put, (int p, int y, int x, int ch, int t), { Module.ln.put(p, y, x, ch, t); });
 EM_JS(void, js_cursor, (int p, int y, int x), { Module.ln.cursor(p, y, x); });
@@ -42,18 +43,26 @@ EM_JS(void, js_end, (int saved), { Module.ln.end(saved); });
 void be_init(int p, int cols, int rows) { js_init(p, cols, rows); }
 void be_put(int p, int y, int x, chtype ch, int tile) { js_put(p, y, x, (int)ch, tile); }
 void be_cursor(int p, int y, int x) { js_cursor(p, y, x); }
-void be_popup(int rows, int cols) { js_popup(rows, cols); }
+void be_popup(int rows, int cols) { memset(rowfg_sent, 0, sizeof rowfg_sent); js_popup(rows, cols); }
 void be_sound(const char *event) { js_sound(event); }
 
 /* Visible window (RVIP 5b): monsters in sight (Larn shows only the cells
  * around the player: 1, 2 with the Sword of Slashing, 3 with awareness) and
  * the objects drawn on the map */
-EM_JS(void, js_invfg, (int y, const char *c), { Module.ln.invfg(y, UTF8ToString(c)); });
-void be_invfg(int y, const char *css)
+EM_JS(void, js_invfg, (int y, const char *c, int t), { Module.ln.invfg(y, UTF8ToString(c), t); });
+void be_invfg(int y, const char *css, int tile)
 {
     static const char *last[64];
-    if (y < 64 && last[y] != css) { last[y] = css; js_invfg(y, css); }
+    static int lastt[64];
+    if (y < 64 && (last[y] != css || lastt[y] != tile)) { last[y] = css; lastt[y] = tile; js_invfg(y, css, tile); }
 }
+EM_JS(void, js_rowfg, (int p, int y, const char *c), { Module.ln.rowfg(p, y, UTF8ToString(c)); });
+void be_rowfg(int p, int y, const char *css)
+{
+    if (y < 64 && rowfg_sent[y] != css) { rowfg_sent[y] = css; js_rowfg(p, y, css); }
+}
+EM_JS(int, js_icons, (void), { return Module.ln.icons(); });
+int be_icons(void) { return js_icons(); }
 EM_JS(void, js_vis, (const char *s), { if (Module.ln.vis) Module.ln.vis(UTF8ToString(s)); });
 static void send_visible(void)
 {
@@ -63,12 +72,12 @@ static void send_visible(void)
     for (y = playery - r; y <= playery + r; y++)
         for (x = playerx - r; x <= playerx + r; x++)
             if (x >= 0 && y >= 0 && x < MAXX && y < MAXY && mitem[x][y] && n < 3900)
-                n += snprintf(buf + n, sizeof buf - n, "M%c%s\n", monstnamelist[mitem[x][y]], monster[mitem[x][y]].name);
+                n += snprintf(buf + n, sizeof buf - n, "M%c%s\t\t%d\n", monstnamelist[mitem[x][y]], monster[mitem[x][y]].name, wc_montile(mitem[x][y]));
     for (y = 0; y < MAXY; y++)
         for (x = 0; x < MAXX; x++)
             if ((know[x][y] & KNOWHERE) && item[x][y] && objnamelist[item[x][y]] > ' ' && n < 3900
                 && !strchr("#.", objnamelist[item[x][y]]))
-                n += snprintf(buf + n, sizeof buf - n, "I%c%s\t%s\n", objnamelist[item[x][y]], objectname[item[x][y]], wc_css(item[x][y]));
+                n += snprintf(buf + n, sizeof buf - n, "I%c%s\t%s\t%d\n", objnamelist[item[x][y]], objectname[item[x][y]], wc_css(item[x][y]), wc_objtile(item[x][y]));
     buf[n] = 0;
     js_vis(buf);
 }

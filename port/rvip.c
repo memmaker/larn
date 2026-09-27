@@ -273,7 +273,8 @@ static void key_name(char *b, int k)
 
 /* Draws rows[] as a list over the map (top left), row `cur` highlighted,
  * scrolled so it shows. Returns the first row shown. */
-static int draw_list(const char *title, char rows[][80], int n, int cur, int top)
+/* slot: the inventory slot per row, for the row's colour (NULL: none) */
+static int draw_list(const char *title, char rows[][80], int n, int cur, int top, const int *slot)
 {
     int i, w = title ? (int)strlen(title) : 0, shown = n < LIST_ROWS ? n : LIST_ROWS, y = 0;
     for (i = 0; i < n; i++)
@@ -283,6 +284,7 @@ static int draw_list(const char *title, char rows[][80], int n, int cur, int top
     for (i = 0; i < LIST_ROWS + 1; i++) {
         move(i, 0);
         clrtoeol();
+        wc_rowfg(stdscr, i, "");
     }
     if (title) {
         move(y++, 0);
@@ -292,6 +294,7 @@ static int draw_list(const char *title, char rows[][80], int n, int cur, int top
     }
     for (i = top; i < top + shown; i++) {
         int k;
+        if (slot) wc_rowfg(stdscr, y, wc_css(iven[slot[i]])); /* the Inventory pane's colours */
         move(y++, 0);
         attrset(i == cur ? A_STANDOUT : A_NORMAL);
         addstr(rows[i]);
@@ -302,7 +305,12 @@ static int draw_list(const char *title, char rows[][80], int n, int cur, int top
     return top;
 }
 
-static void close_list(void) { draws(0, MAXX, 0, MAXY); }
+static void close_list(void)
+{
+    int i;
+    for (i = 0; i < LIST_ROWS + 1; i++) wc_rowfg(stdscr, i, "");
+    draws(0, MAXX, 0, MAXY);
+}
 
 static int getkey(void)
 {
@@ -323,7 +331,7 @@ int cmd_menu(void)
     }
     wc_overlay();
     for (;;) {
-        top = draw_list(NULL, rows, ncmds, cur, top);
+        top = draw_list(NULL, rows, ncmds, cur, top, NULL);
         k = getkey();
         if (k == ESC || k == '0') break;
         if (k == '8') cur = (cur + ncmds - 1) % ncmds;
@@ -428,7 +436,7 @@ static int item_menu(int i)
     item_name(title, sizeof title, i);
     for (j = 0; j < n; j++) snprintf(rows[j], sizeof rows[j], " %c  %s", a[j].key, a[j].name);
     for (;;) {
-        draw_list(title + 3, rows, n, cur, 0);
+        draw_list(title + 3, rows, n, cur, 0, NULL);
         k = getkey();
         if (k == '8') cur = (cur + n - 1) % n;
         else if (k == '2') cur = (cur + 1) % n;
@@ -460,7 +468,7 @@ int inventory_browse(void)
             return 0;
         }
         if (cur >= n) cur = n - 1;
-        top = draw_list("Inventory: letter uses, Shift drops, Ctrl examines, Enter menu", rows, n, cur, top);
+        top = draw_list("Inventory: letter uses, Shift drops, Ctrl examines, Enter menu", rows, n, cur, top, slot);
         k = getkey();
         if (k == ESC || k == '0' || k == '.' || k == 'i') break;
         if (k == '8') { cur = (cur + n - 1) % n; continue; }
@@ -518,7 +526,7 @@ int rvip_whatitem(const char *verb)
     snprintf(title, sizeof title, "What do you want to %s? (Enter chooses, Esc)", verb);
     wc_overlay();
     for (;;) {
-        top = draw_list(title, rows, n, cur, top);
+        top = draw_list(title, rows, n, cur, top, slot);
         k = getkey();
         if (k == '8' && n) cur = (cur + n - 1) % n;
         else if (k == '2' && n) cur = (cur + 1) % n;
