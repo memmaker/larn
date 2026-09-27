@@ -1,6 +1,6 @@
 /* RVIP additions for Larn, called from parse() (main.c) and whatitem():
  *   x        auto-explore: one step per turn over what the player knows
- *   < >      off the stairs: walk to the nearest known one, take it there
+ *   < >      off the stairs: walk to the nearest known one (press again to take it)
  *   Enter    floating menu of every command (from larn.help)
  *   i        inventory with a cursor and item menus
  *   item prompts ("quaff which?") show the list with a cursor */
@@ -13,6 +13,9 @@
 #include "../action.h"
 #include "../display.h"
 #include "curses.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #define MAXINVEN 26 /* inventory.c */
 #define ESC 27
@@ -151,10 +154,8 @@ static int auto_step(void)
     visited[level][playerx][playery] = 1;
     if (level != auto_level) return stop(NULL); /* new level */
     /* arrived ("You have found ..." is expected here) */
-    if (mode != 'x' && stairs_for(mode, item[playerx][playery])) {
-        auto_mode = 0;
-        return level == 0 && item[playerx][playery] == OENTRANCE ? 'E' : mode;
-    }
+    if (mode != 'x' && stairs_for(mode, item[playerx][playery]))
+        return stop(NULL); /* only walk there: the player takes them with the key again */
     if (wc_msgs != auto_msgs) return stop(NULL); /* something happened */
     if (hitflag) return stop(NULL);
     if (c[BLINDCOUNT] || c[CONFUSE]) return stop("\nYou are in no state to explore.");
@@ -249,6 +250,7 @@ static void load_cmds(void)
             else if (part[0] == '^' && strlen(part) == 2) k = CTRL(part[1]);
             else continue; /* "Enter", "< >": notes, not commands */
             if (k == 'x' && c3 == 2) continue;
+            if (strchr("hjklyubnHJKLYUBN", k)) continue; /* moves and runs: not menu material */
             last[c3] = cn[c3];
             cols[c3][cn[c3]].key = k;
             snprintf(cols[c3][cn[c3]].text, sizeof cols[c3][0].text, "%s", p);
@@ -537,6 +539,9 @@ int rvip_whatitem(const char *verb)
 int rvip_command(int k)
 {
     if (k == 0) {
+#ifdef __EMSCRIPTEN__
+        if (auto_mode) emscripten_sleep(40); /* let the browser paint each step */
+#endif
         if (auto_mode) return auto_step();
         if (reopen == 1) {
             reopen = 0;
@@ -553,6 +558,7 @@ int rvip_command(int k)
         int o = item[playerx][playery];
         if (k == '<' ? o == OSTAIRSUP || o == OVOLUP : o == OSTAIRSDOWN || o == OVOLDOWN)
             return k; /* on them: as before */
+        if (o == OENTRANCE && stairs_for((char)k, o)) return 'E'; /* the dungeon entrance */
         return start((char)k);
     }
     return k;

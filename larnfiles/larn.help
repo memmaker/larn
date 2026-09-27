@@ -42,7 +42,7 @@ s  sit on a throne         S  save the game            /  identify objects in
 t  tidy up at a fountain   T  take off armor              the game
 u  move northeast          U  run northeast            < > off the stairs: walk
 v  print program version                                  to the nearest known
-w  wield a weapon          W  wear armor                  one and take it
+w  wield a weapon          W  wear armor                  one (again: take it)
 y  move northwest          Y  run northwest            ^L redraw the screen
                 [7mSpecial Notes[m
 
