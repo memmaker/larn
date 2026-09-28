@@ -126,6 +126,7 @@ void wc_rowfg(WINDOW *w, int y, const char *css); /* a row's colour (stdscr; cle
 void be_line(int p, int y, const char *text, const char *css, int tile);
 void be_rows(int p, int rows);
 void wc_rowattr(int p, int y, const char *css, int tile); /* a text pane row's colour and icon */
+chtype wc_cell(int p, int y, int x);   /* a text pane cell with attributes (native be_line) */
 int be_icons(void);                      /* the frontend draws tiles (a tile set is loaded) */
 int wc_objtile(int o);                   /* tiles.c: an object's tile, -1 = none */
 int wc_montile(int m);                   /* tiles.c: a monster's tile, -1 = none */

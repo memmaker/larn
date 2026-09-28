@@ -75,12 +75,17 @@
 	function rowHtml(p, y) {
 		var T = txt[p], s = T.lines[y] || '', cx = cur.p === p && cur.y === y ? cur.x : -1;
 		if (cx >= 0) {                              /* the cursor: one cell, past the end if need be */
-			var vis = s.replace(/[\x01\x02]/g, '');
+			var vis = s.replace(/\x05\*?#[0-9a-f]{6}|[\x01\x02\x06]/g, '');
 			while (vis.length <= cx) { s += ' '; vis += ' '; }
-			for (var i = 0, k = 0; i < s.length; i++) if (s[i] > '\x02' && k++ === cx) break;
+			for (var i = 0, k = 0; i < s.length; i++) {
+				if (s[i] === '\x05') { i += s[i + 1] === '*' ? 8 : 7; continue; }
+				if (s[i] > '\x06' && k++ === cx) break;
+			}
 			s = s.slice(0, i) + '\x03' + s[i] + '\x04' + s.slice(i + 1);
 		}
-		return esc(s).replace(/\x01/g, '<span class="so">').replace(/[\x02\x04]/g, '</span>').replace(/\x03/g, '<span class="cur">');
+		return esc(s).replace(/\x01/g, '<span class="so">').replace(/[\x02\x04\x06]/g, '</span>')
+			.replace(/\x03/g, '<span class="cur">')
+			.replace(/\x05(\*?)(#[0-9a-f]{6})/g, function (m, b, c) { return '<span style="color:' + c + (b ? ';font-weight:bold' : '') + '">'; });
 	}
 	function drawRow(p, y) {
 		var T = txt[p], d = T && T.el.children[y];
@@ -499,7 +504,9 @@
 		if (!tilesReady || !(t >= 0)) return null;
 		var s = document.createElement('i');
 		s.className = 'wm-ic';
-		s.style.cssText = 'width:8px;margin:0 4px;image-rendering:pixelated;background:url(' + tiles.src + ') -' + (t % 32) * TW + 'px -' + ((t / 32) | 0) * TH + 'px';
+		var h = 1.2, w = h * TW / TH, rows = Math.ceil(tiles.naturalHeight / TH);   /* em: grows with A+ */
+		s.style.cssText = 'display:inline-block;vertical-align:middle;width:' + w + 'em;height:' + h + 'em;margin:0 0.3em;image-rendering:pixelated;' +
+			'background:url(' + tiles.src + ') ' + -(t % 32) * w + 'em ' + -((t / 32) | 0) * h + 'em / ' + 32 * w + 'em ' + rows * h + 'em no-repeat';
 		return s;
 	}
 	function startTiles() {

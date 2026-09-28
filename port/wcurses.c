@@ -212,6 +212,27 @@ static void cursor(int p, int y, int x) { cur_p = p; cur_y = y; be_cursor(p, y, 
 
 static int blank(chtype ch) { return (ch & A_CHARTEXT) == ' ' && !(ch & A_STANDOUT); }
 
+/* a cell's colour run "\x05#rrggbb" ("\x05*#rrggbb": bold): curses colours
+ * 0-7, +8 bold (as the map's palette in larn.js); bold without a colour
+ * keeps the row's colour, bold weight */
+static const char *pal[16] = { "#000000", "#cd3131", "#0dbc79", "#e5e510", "#4c7eff", "#bc3fbc", "#11a8cd", "#d7d7d7",
+    "#666666", "#f14c4c", "#23d18b", "#f5f543", "#6ea0ff", "#d670d6", "#29b8db", "#ffffff" };
+static int run(chtype ch, const char *row, char *out)
+{
+    int bold = (ch & A_BOLD) != 0, col = ch & 0x800 ? (ch >> 8) & 7 : 0;
+    const char *css;
+    if (!col && !bold) return 0;
+    css = col ? pal[col + 8 * bold] : *row ? row : pal[15];
+    return sprintf(out, "\x05%s%s", bold ? "*" : "", css);
+}
+
+/* native backends: a text pane cell with its attributes (be_line draws from these) */
+chtype wc_cell(int p, int y, int x)
+{
+    WINDOW *w = pn[p];
+    return w && y >= 0 && y < w->maxy && x >= 0 && x < w->maxx ? w->c[y * w->maxx + x] : ' ';
+}
+
 static void pflush(int i)
 {
     WINDOW *p = pn[i];
@@ -223,7 +244,8 @@ static void pflush(int i)
     if (cur_p == i && cur_y >= used) used = cur_y + 1;
     if (used != rows_sent[i]) be_rows(i, rows_sent[i] = used);
     for (y = 0; y < p->maxy; y++) {
-        char buf[2 * 512 + 2];
+        char buf[12 * 512 + 4], r[16], cr[16] = "";
+        const char *row = y < RMAX && rcss[i][y] ? rcss[i][y] : "";
         int n = 0, so = 0, end = p->maxx;
         if (p->first[y] < 0) continue;
         p->first[y] = p->last[y] = -1;
@@ -231,12 +253,20 @@ static void pflush(int i)
         for (x = 0; x < end && x < 512; x++) {
             chtype ch = p->c[y * p->maxx + x];
             int c = ch & A_CHARTEXT, s = (ch & A_STANDOUT) != 0;
-            if (s != so) buf[n++] = (so = s) ? 1 : 2;
+            r[run(ch, row, r)] = 0;
+            if (c == ' ' && !s) strcpy(r, cr);       /* a blank doesn't break a run */
+            if (s != so || strcmp(r, cr)) {
+                if (*cr) buf[n++] = 6;
+                if (s != so) buf[n++] = (so = s) ? 1 : 2;
+                n += sprintf(buf + n, "%s", r);
+                strcpy(cr, r);
+            }
             buf[n++] = c < 32 || c > 126 ? ' ' : c;
         }
+        if (*cr) buf[n++] = 6;
         if (so) buf[n++] = 2;
         buf[n] = 0;
-        be_line(i, y, buf, y < RMAX && rcss[i][y] ? rcss[i][y] : "", y < RMAX && rcss[i][y] ? rtile[i][y] : -1);
+        be_line(i, y, buf, row, y < RMAX && rcss[i][y] ? rtile[i][y] : -1);
     }
 }
 

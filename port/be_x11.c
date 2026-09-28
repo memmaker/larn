@@ -323,13 +323,9 @@ int be_icons(void) { return 0; }
 /* text rows (RVIP W0 be_line): drawn per cell here; X11 panes keep their full size */
 void be_line(int p, int y, const char *s, const char *css, int tile)
 {
-    chtype so = 0;
     int x;
-    (void)css; (void)tile;
-    for (x = 0; x < P[p].cols; x++) {
-        while (*s == 1 || *s == 2) so = *s++ == 1 ? A_STANDOUT : 0;
-        be_put(p, y, x, (*s ? (unsigned char)*s++ : ' ') | so, -1);
-    }
+    (void)s; (void)css; (void)tile;
+    for (x = 0; x < P[p].cols; x++) be_put(p, y, x, wc_cell(p, y, x), -1);   /* cells keep their colours */
 }
 void be_rows(int p, int rows) { (void)p; (void)rows; }
 

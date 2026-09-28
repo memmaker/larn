@@ -118,13 +118,9 @@ void be_cursor(int p, int y, int x) { curP = p; curY = y; curX = x; }
 void be_rows(int p, int rows) { P[p].er = rows; full = 1; }
 void be_line(int p, int y, const char *s, const char *css, int tile)
 {
-    chtype so = 0;
     int x;
-    (void)css; (void)tile;
-    for (x = 0; x < P[p].cols; x++) {
-        while (*s == 1 || *s == 2) so = *s++ == 1 ? A_STANDOUT : 0;
-        be_put(p, y, x, (*s ? (unsigned char)*s++ : ' ') | so, -1);
-    }
+    (void)s; (void)css; (void)tile;
+    for (x = 0; x < P[p].cols; x++) be_put(p, y, x, wc_cell(p, y, x), -1);   /* cells keep their colours */
 }
 void be_prompt(const char *s) { snprintf(prompt, sizeof prompt, "%s", s); }
 
