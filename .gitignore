@@ -80,3 +80,5 @@ larn-x11
 port/obj/
 save/
 web/dist/
+larn-term
+larn-term.exe
