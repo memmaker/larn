@@ -15,6 +15,8 @@ int savegame(char *);  /* diag.c */
 static const char *rowfg_sent[64]; /* be_rowfg: colour last sent per pop-up row */
 EM_JS(void, js_init, (int p, int c, int r), { Module.ln.init(p, c, r); });
 EM_JS(void, js_put, (int p, int y, int x, int ch, int t), { Module.ln.put(p, y, x, ch, t); });
+EM_JS(void, js_extent, (int p, int c, int r), { Module.ln.extent(p, c, r); });
+void be_extent(int p, int cols, int rows) { js_extent(p, cols, rows); }
 EM_JS(void, js_cursor, (int p, int y, int x), { Module.ln.cursor(p, y, x); });
 EM_JS(void, js_popup, (int r, int c), { Module.ln.popup(r, c); });
 EM_JS(void, js_flush, (int lvl, int hy, int hx), { Module.ln.flush(lvl, hy, hx); });

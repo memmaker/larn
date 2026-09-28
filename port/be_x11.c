@@ -324,3 +324,4 @@ int be_icons(void) { return 0; }
 void be_rowfg(int p, int y, const char *css) { }
 
 void be_prompt(const char *s) { }   /* web only: the prompt line over the map */
+void be_extent(int p, int cols, int rows) { (void)p; (void)cols; (void)rows; }   /* web only */

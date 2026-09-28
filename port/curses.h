@@ -123,6 +123,7 @@ const char *wc_css(int obj);             /* tiles.c: an object's colour */
 void be_invfg(int y, const char *css, int tile); /* inventory row colour and icon tile (-1: none) */
 void wc_rowfg(WINDOW *w, int y, const char *css); /* a row's colour (stdscr; cleared by clear) */
 void be_rowfg(int p, int y, const char *css); /* pop-up row colour */
+void be_extent(int p, int cols, int rows); /* text pane trimmed: cells in use (RVIP W0) */
 int be_icons(void);                      /* the frontend draws tiles (a tile set is loaded) */
 int wc_objtile(int o);                   /* tiles.c: an object's tile, -1 = none */
 int wc_montile(int m);                   /* tiles.c: a monster's tile, -1 = none */

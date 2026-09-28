@@ -57,7 +57,9 @@
 			T.font = f + 'px ' + face(p);
 		}
 		if (p === P_MAP) T.font = (L.mapFace ? '' : 'bold ') + Math.round(T.cw * 1.4) + 'px ' + face(p);
-		var w = T.cols * T.cw + 2 * T.pad, h = T.rows * T.ch + 2 * T.pad;
+		/* text panes come trimmed from the game (be_extent): the canvas covers T.vc × T.vr cells */
+		if (p === P_MAP || p === P_POP) { T.vc = T.cols; T.vr = T.rows; }
+		var w = T.vc * T.cw + 2 * T.pad, h = T.vr * T.ch + 2 * T.pad;
 		T.cv.width = Math.round(w * dpr); T.cv.height = Math.round(h * dpr);
 		T.w = w; T.h = h;
 		T.ctx = T.cv.getContext('2d');
@@ -71,13 +73,14 @@
 	function makePane(p, cols, rows) {
 		var cv = p === P_POP ? document.querySelector('#pop canvas') : document.querySelector('#t-' + WIN[p] + ' canvas');
 		var n = cols * rows;
-		panes[p] = { cv: cv, cols: cols, rows: rows, ch_: new Int32Array(n).fill(32),
+		panes[p] = { cv: cv, cols: cols, rows: rows, vc: 1, vr: 1, ch_: new Int32Array(n).fill(32),
 			t: new Int32Array(n).fill(-1) };
 		shape(p);
 	}
 
 	function draw(p, y, x) {
 		var T = panes[p], c = T.ctx, i = y * T.cols + x;
+		if (x >= T.vc || y >= T.vr) return;                 /* outside the trimmed canvas */
 		var ch = T.ch_[i], t = T.t[i];
 		var px = T.pad + x * T.cw, py = T.pad + y * T.ch;
 		/* chtype: char, colour (bits 8-10, set flag 0x800), standout 0x1000, bold 0x2000, underline 0x4000 */
@@ -201,7 +204,9 @@
 		}
 		/* the map never shrinks: bigger than its window, it scrolls with the hero */
 		if (p === P_MAP) { T.box = box; scrollMap(true); return; }
-		var sc = Math.min(1, box.w / T.w, box.h / T.h);
+		/* text windows: the font size is the user's; the canvas is shown 1:1 and
+		 * the window scrolls (pop-up: scaled down to fit over the map) */
+		var sc = p === P_POP ? Math.min(1, box.w / T.w, box.h / T.h) : 1;
 		T.cv.style.width = T.w * sc + 'px';
 		T.cv.style.height = T.h * sc + 'px';
 		if (p === P_POP) RvipWM.popup($('pop'), { x: L.tile / 2 });
@@ -306,6 +311,11 @@
 			var i = y * T.cols + x;
 			T.ch_[i] = ch; T.t[i] = t;
 			draw(p, y, x);
+		},
+		extent: function (p, c, r) {   /* the game's trimmed size of a text pane */
+			var T = panes[p];
+			if (!T || (T.vc === c && T.vr === r)) return;
+			T.vc = c; T.vr = r; shape(p);
 		},
 		cursor: function (p, y, x) { cur.p = p; cur.y = y; cur.x = x; },
 		popup: function (rows, cols) {

@@ -195,6 +195,18 @@ static void pflush(int i)
         for (x = p->first[y]; x <= p->last[y]; x++) be_put(i, y, x, p->c[y * p->maxx + x], -1);
         p->first[y] = p->last[y] = -1;
     }
+    /* text panes are sent trimmed (RVIP W0): the cells in use, no blank
+     * columns after the text and no empty rows below it */
+    if (p && i != P_POP) {
+        static int ext_c[NPANES], ext_r[NPANES];
+        int cols = 0, rows = 0;
+        for (y = 0; y < p->maxy; y++)
+            for (x = 0; x < p->maxx; x++) {
+                chtype ch = p->c[y * p->maxx + x];
+                if ((ch & A_CHARTEXT) > ' ' || (ch & A_STANDOUT)) { if (x + 1 > cols) cols = x + 1; rows = y + 1; }
+            }
+        if (cols != ext_c[i] || rows != ext_r[i]) { ext_c[i] = cols; ext_r[i] = rows; be_extent(i, cols ? cols : 1, rows ? rows : 1); }
+    }
 }
 
 static void close_popup(void)
