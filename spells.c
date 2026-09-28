@@ -1168,7 +1168,7 @@ dirsub (int *x, int *y)
   for (i = 0;;)
     {
 
-      switch (ttgetch ())
+      switch (ttgetdir ())
 	{
 	case 'b':
 	  i++;

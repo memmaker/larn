@@ -5,6 +5,7 @@
  * reloads; be_end() removes it when the game ends without 'S'. */
 #include <emscripten.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "../larncons.h"
 #include "../larndata.h"
@@ -48,9 +49,10 @@ void be_cursor(int p, int y, int x) { js_cursor(p, y, x); }
 void be_popup(int rows, int cols) { memset(rowfg_sent, 0, sizeof rowfg_sent); js_popup(rows, cols); }
 void be_sound(const char *event) { js_sound(event); }
 
-/* Visible window (RVIP 5b): monsters in sight (Larn shows only the cells
- * around the player: 1, 2 with the Sword of Slashing, 3 with awareness) and
- * the objects drawn on the map */
+/* Visible window (RVIP 5b): the monsters and objects drawn on the map. A
+ * monster counts when the map shows its letter at its cell (Larn draws the
+ * ones moving through explored cells, not only those next to the player),
+ * the same test explore uses to stop; nearest first. */
 EM_JS(void, js_invfg, (int y, const char *c, int t), { Module.ln.invfg(y, UTF8ToString(c), t); });
 void be_invfg(int y, const char *css, int tile)
 {
@@ -66,15 +68,27 @@ void be_rowfg(int p, int y, const char *css)
 EM_JS(int, js_icons, (void), { return Module.ln.icons(); });
 int be_icons(void) { return js_icons(); }
 EM_JS(void, js_vis, (const char *s), { if (Module.ln.vis) Module.ln.vis(UTF8ToString(s)); });
+static int mdist(int i)
+{
+    int dx = abs(i % MAXX - playerx), dy = abs(i / MAXX - playery);
+    return dx > dy ? dx : dy;
+}
+
 static void send_visible(void)
 {
     static char buf[4096];
-    int n = 0, x, y, r = c[AWARENESS] ? 3 : (iven[c[WIELD]] == OHSWORD && ivenarg[c[WIELD]] >= 0) ? 2 : 1;
-    if (c[BLINDCOUNT]) r = -1;
-    for (y = playery - r; y <= playery + r; y++)
-        for (x = playerx - r; x <= playerx + r; x++)
-            if (x >= 0 && y >= 0 && x < MAXX && y < MAXY && mitem[x][y] && n < 3900)
-                n += snprintf(buf + n, sizeof buf - n, "M%c%s\t\t%d\n", monstnamelist[mitem[x][y]], monster[mitem[x][y]].name, wc_montile(mitem[x][y]));
+    static int mon[MAXX * MAXY];
+    int n = 0, x, y, i, j, nm = 0;
+    for (y = 0; y < MAXY && !c[BLINDCOUNT]; y++)
+        for (x = 0; x < MAXX; x++)
+            if (mitem[x][y] && (int)(stdscr->c[y * stdscr->maxx + x] & A_CHARTEXT) == monstnamelist[mitem[x][y]])
+                mon[nm++] = y * MAXX + x;
+    for (i = 0; i < nm; i++)   /* nearest first (few monsters: insertion sort) */
+        for (j = i; j > 0 && mdist(mon[j]) < mdist(mon[j - 1]); j--) { int t = mon[j]; mon[j] = mon[j - 1]; mon[j - 1] = t; }
+    for (i = 0; i < nm && n < 3900; i++) {
+        int m = mitem[mon[i] % MAXX][mon[i] / MAXX];
+        n += snprintf(buf + n, sizeof buf - n, "M%c%s\t\t%d\n", monstnamelist[m], monster[m].name, wc_montile(m));
+    }
     for (y = 0; y < MAXY; y++)
         for (x = 0; x < MAXX; x++)
             if ((know[x][y] & KNOWHERE) && item[x][y] && objnamelist[item[x][y]] > ' ' && n < 3900

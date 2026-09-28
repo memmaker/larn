@@ -30,6 +30,17 @@
 	var tiles = new Image(), tilesReady = false;
 	var saveReq = false, app;
 	var cur = { p: -1, y: 0, x: 0 };
+	/* Messages follows the newest line unless the player scrolled up to read
+	 * back (the game refreshes on every key poll); a key or scrolling back
+	 * to the bottom follows again */
+	var msgStick = true, byUser = false;   /* byUser: only the player's scrolling decides, not the game's own */
+	document.addEventListener('DOMContentLoaded', function () {
+		var mb = document.querySelector('#t-msg .body');
+		if (!mb) return;
+		['wheel', 'touchstart', 'pointerdown'].forEach(function (t) { mb.addEventListener(t, function () { byUser = true; }, { passive: true }); });
+		mb.addEventListener('scroll', function () { if (byUser) msgStick = mb.scrollTop + mb.clientHeight >= mb.scrollHeight - 4; });
+	});
+	document.addEventListener('keydown', function () { msgStick = true; byUser = false; }, true);
 	var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 	var L = null, rects = {};
 
@@ -333,7 +344,7 @@
 			drawCursor();
 			ln.lastCur = cur.p >= 0 ? { p: cur.p, y: cur.y, x: cur.x } : null;
 			var mb = document.querySelector('#t-msg .body');
-			if (mb) mb.scrollTop = mb.scrollHeight;   /* the newest message stays in view */
+			if (mb && msgStick) mb.scrollTop = mb.scrollHeight;   /* the newest message stays in view */
 			audio.level = level;
 			if (!!town !== audio.town) { audio.town = !!town; updateMusic(); }
 		},

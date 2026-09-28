@@ -23,6 +23,7 @@ void setupvt100 (void);
 void clearvt100 (void);
 int ttgetch_noblock(void);
 char ttgetch (void);
+int ttgetdir (void);
 void scbr (void);
 void sncbr (void);
 void newgame (void);

@@ -256,6 +256,20 @@ ttgetch(void)
     return (char)k;
 }
 
+/*
+* ttgetdir()      Read one key for a direction prompt: arrows, keypad and
+*                 digits come back as hjklyubn, as at the command prompt
+*/
+int
+ttgetdir(void)
+{
+#ifdef EXTRA
+    c[BYTESIN]++;
+#endif
+    lflush();
+    return llgetch();
+}
+
 /* non‑blocking ttgetch: returns -1 if no key available */
 int
 ttgetch_noblock(void)

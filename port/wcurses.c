@@ -33,7 +33,11 @@ static int nodelay_on, live = -1;
 #define MAP_H 17
 #define MAP_W 67
 #define MSG_Y 20
+#ifdef __EMSCRIPTEN__
+#define HIST 100         /* message history rows: the page's Messages window scrolls */
+#else
 #define HIST 18          /* message history rows */
+#endif
 #define ST_W 42
 #define ST_H 15
 #define INV_W 42
@@ -270,6 +274,8 @@ void wc_msgnew(void)
     live = stdscr->cury;
 }
 
+static int prompt_msgs = -1; /* wc_msgs when the prompt line was last sent */
+
 static void msg_refresh(void)
 {
     int x;
@@ -279,6 +285,9 @@ static void msg_refresh(void)
         for (x = 0; x < COLS; x++) set(pn[P_MSG], y, x, y == nhist && live >= 0 ? at(stdscr, live, x) : ' ');
     for (x = 0; x < COLS && x < 255; x++) r[x] = live >= 0 ? at(stdscr, live, x) & A_CHARTEXT : ' ';
     r[x] = 0;
+    /* a new message shows the prompt line again, even with the same text as
+     * the one a key hid ("Not with a monster in view." on the second x) */
+    if (prompt_msgs != wc_msgs) { prompt_msgs = wc_msgs; be_prompt(""); }
     be_prompt(r);                   /* the prompt line over the map */
 }
 

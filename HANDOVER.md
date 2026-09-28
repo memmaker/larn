@@ -58,3 +58,10 @@
   Here: `be_prompt(r)` from `msg_refresh()` in `port/wcurses.c` (the `live` row
   of stdscr); no command-prompt flag exists, so `port/be_web.c` passes `!wait`
   (the command prompt is the caller that polls).
+- 2026-09-28 fixes: direction prompts (`dirsub()`) read with `ttgetdir()` (io.c), which
+  turns arrows/keypad/digits into hjklyubn like the command prompt (raw `ttgetch()` ignored
+  them, so Open/Close/spells hung). `msg_refresh()` sends `""` before a new message so
+  rvip-wm.js shows the prompt line again for a repeat of the text a key hid. Visible lists
+  every monster the map shows (same test as explore's stop), nearest first. Web keeps 100
+  message rows; Messages follows the newest line unless the player scrolled up (a key
+  follows again) — before, every 50 ms key poll snapped it to the bottom.
