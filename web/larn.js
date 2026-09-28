@@ -176,6 +176,7 @@
 				if (s.font && d.wm && !d.wm.fs) d.wm.fs = s.font;   /* old layout: sizes were L.font */
 				if (typeof s.face === 'string') d.face = s.face;
 				if (typeof s.mapFace === 'string') d.mapFace = s.mapFace;
+				if (typeof s.tiles === 'string') d.tiles = s.tiles;  /* the tile set, by name */
 				if (s.audio) d.audio = { sound: s.audio.sound === true, music: s.audio.music === true };
 			}
 		} catch (err) { /* nothing saved yet */ }
@@ -269,8 +270,8 @@
 	}
 
 	function resetLayout() {
-		var a = L.audio, fc = L.face, mf = L.mapFace;
-		L = defaultLayout(); L.audio = a; L.face = fc; L.mapFace = mf; L.wm = wm.state();
+		var a = L.audio, fc = L.face, mf = L.mapFace, ts = L.tiles;
+		L = defaultLayout(); L.audio = a; L.face = fc; L.mapFace = mf; L.tiles = ts; L.wm = wm.state();
 		for (var p = 0; p < panes.length; p++) if (panes[p]) shape(p);
 		applyDom(); saveLayout();
 	}
@@ -426,7 +427,7 @@
 		ln: ln,
 		preRun: [function () {
 			var FS = Module.FS;
-			if (!tilesDone) { Module.addRunDependency('tiles'); tilesWait = true; }
+			Module.addRunDependency('tiles'); tilesWait = true;   /* the sheet loads once the layout says which */
 			FS.mkdirTree(DIR);
 			FS.mount(Module.IDBFS, {}, DIR);
 			FS.chdir(DIR);                       /* Larn keeps every file in its cwd */
@@ -442,6 +443,9 @@
 				try { FS.stat(DIR + '/larnopts'); } catch (e) {
 					FS.writeFile(DIR + '/larnopts', FS.readFile(DATA + '/larnopts', { encoding: 'utf8' }).replace(/^color: off/m, 'color: on'));
 				}
+				loadLayout();                    /* before the game: it holds the tile set */
+				TILESETS.forEach(function (t, i) { if (t[1] === L.tiles) tileset = i; });
+				startTiles();
 				Module.removeRunDependency('idbfs');
 			});
 		}],
@@ -465,11 +469,9 @@
 	tiles.onerror = function () { tilesFinished(false); };
 	/* tile sets: the Amiga tiles or none (text); a per-browser preference */
 	var TILESETS = [['tiles.png', 'Amiga'], [null, 'None']], tileset = 0;
-	try { tileset = +localStorage.getItem('tileset') % TILESETS.length || 0; } catch (err) { /* no storage */ }
-	function renderTileset() { var b = $('btn-tiles'); if (b) b.textContent = 'Tiles: ' + TILESETS[tileset][1]; }
 	function toggleTileset() {
 		tileset = (tileset + 1) % TILESETS.length;
-		try { localStorage.setItem('tileset', tileset); } catch (err) { /* no storage */ }
+		L.tiles = TILESETS[tileset][1]; saveLayout();
 		renderTileset();
 		var redraw = function () {
 			[P_MAP, P_INV].forEach(function (p) { if (panes[p]) shape(p); });
@@ -509,7 +511,11 @@
 		s.style.cssText = 'width:8px;margin:0 4px;image-rendering:pixelated;background:url(' + tiles.src + ') -' + (t % 32) * TW + 'px -' + ((t / 32) | 0) * TH + 'px';
 		return s;
 	}
-	if (TILESETS[tileset][0]) tiles.src = TILESETS[tileset][0]; else tilesDone = true;
+	function startTiles() {
+		renderTileset();
+		if (TILESETS[tileset][0]) tiles.src = TILESETS[tileset][0];
+		else { tilesDone = true; if (tilesWait) Module.removeRunDependency('tiles'); }   /* None: text */
+	}
 
 	/* autosave: every 2 minutes and when the page is hidden */
 	setInterval(function () { saveReq = true; }, 120000);
