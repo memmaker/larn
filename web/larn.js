@@ -31,16 +31,9 @@
 	var saveReq = false, app;
 	var cur = { p: -1, y: 0, x: 0 };
 	/* Messages follows the newest line unless the player scrolled up to read
-	 * back (the game refreshes on every key poll); a key or scrolling back
-	 * to the bottom follows again */
-	var msgStick = true, byUser = false;   /* byUser: only the player's scrolling decides, not the game's own */
-	document.addEventListener('DOMContentLoaded', function () {
-		var mb = document.querySelector('#t-msg .body');
-		if (!mb) return;
-		['wheel', 'touchstart', 'pointerdown'].forEach(function (t) { mb.addEventListener(t, function () { byUser = true; }, { passive: true }); });
-		mb.addEventListener('scroll', function () { if (byUser) msgStick = mb.scrollTop + mb.clientHeight >= mb.scrollHeight - 4; });
-	});
-	document.addEventListener('keydown', function () { msgStick = true; byUser = false; }, true);
+	 * back (msgMark before a change); a key follows again */
+	var keyFollow = false;
+	document.addEventListener('keydown', function () { keyFollow = true; }, true);
 	var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 	var L = null, rects = {};
 
@@ -52,25 +45,13 @@
 
 	/* top-bar font: the text windows; the map (text mode) has its own */
 	function face(p) { var n = L && (p === P_MAP ? L.mapFace : L.face); return n ? '"' + n + '", ' + FONT : FONT; }
-	function measure(px, p) {
-		var c = document.createElement('canvas').getContext('2d');
-		c.font = px + 'px ' + face(p);
-		return Math.ceil(c.measureText('M').width);
-	}
 
-	/* Cell size from the zoom settings; rebuilds the canvas and redraws */
+	/* Map cell size from the zoom; rebuilds the canvas and redraws */
 	function shape(p) {
 		var T = panes[p];
-		if (p === P_MAP) { T.cw = L.tile / 2; T.ch = L.tile; T.pad = 0; }
-		else {
-			var f = RvipWM.fontSize(p === P_POP ? popWin : WIN[p]);
-			T.fs = f; T.cw = measure(f, p); T.ch = Math.round(f * 1.3); T.pad = p === P_POP ? T.cw : 0;
-			T.font = f + 'px ' + face(p);
-		}
-		if (p === P_MAP) T.font = (L.mapFace ? '' : 'bold ') + Math.round(T.cw * 1.4) + 'px ' + face(p);
-		/* text panes come trimmed from the game (be_extent): the canvas covers T.vc × T.vr cells */
-		if (p === P_MAP || p === P_POP) { T.vc = T.cols; T.vr = T.rows; }
-		var w = T.vc * T.cw + 2 * T.pad, h = T.vr * T.ch + 2 * T.pad;
+		T.cw = L.tile / 2; T.ch = L.tile;
+		T.font = (L.mapFace ? '' : 'bold ') + Math.round(T.cw * 1.4) + 'px ' + face(p);
+		var w = T.cols * T.cw, h = T.rows * T.ch;
 		T.cv.width = Math.round(w * dpr); T.cv.height = Math.round(h * dpr);
 		T.w = w; T.h = h;
 		T.ctx = T.cv.getContext('2d');
@@ -81,19 +62,57 @@
 		fit(p);
 	}
 
+	/* ---------- text windows (RVIP W0 rule 6): HTML lines from the game ----------
+	 * The game sends each changed row trimmed (standout between \x01 and \x02),
+	 * its colour and icon tile, and the rows in use; the WM sets the text size. */
+	var txt = [];              /* pane -> {el, lines, css, tile, n} */
+	function textPane(p) {
+		var el = p === P_POP ? $('pop').firstElementChild : document.querySelector('#t-' + WIN[p] + ' .body' + (p === P_INV ? '' : ' pre'));
+		el.textContent = '';
+		txt[p] = { el: el, lines: [], css: [], tile: [], n: 0 };
+	}
+	function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+	function rowHtml(p, y) {
+		var T = txt[p], s = T.lines[y] || '', cx = cur.p === p && cur.y === y ? cur.x : -1;
+		if (cx >= 0) {                              /* the cursor: one cell, past the end if need be */
+			var vis = s.replace(/[\x01\x02]/g, '');
+			while (vis.length <= cx) { s += ' '; vis += ' '; }
+			for (var i = 0, k = 0; i < s.length; i++) if (s[i] > '\x02' && k++ === cx) break;
+			s = s.slice(0, i) + '\x03' + s[i] + '\x04' + s.slice(i + 1);
+		}
+		return esc(s).replace(/\x01/g, '<span class="so">').replace(/[\x02\x04]/g, '</span>').replace(/\x03/g, '<span class="cur">');
+	}
+	function drawRow(p, y) {
+		var T = txt[p], d = T && T.el.children[y];
+		if (!d) return;
+		d.innerHTML = rowHtml(p, y);
+		d.style.color = T.css[y] || '';
+		if (p === P_INV) { var ic = visIcon(T.tile[y]); if (ic) d.insertBefore(ic, d.firstChild); }
+	}
+	function setRows(p, n) {
+		var T = txt[p];
+		while (T.el.children.length < n) { T.el.appendChild(document.createElement('div')); drawRow(p, T.el.children.length - 1); }
+		while (T.el.children.length > n) T.el.removeChild(T.el.lastChild);
+		T.n = n;
+	}
+	function msgMark() {                          /* before a Messages change: was it at the end? */
+		var b = txt[P_MSG] && txt[P_MSG].el.parentNode;
+		if (b && ln.follow == null) ln.follow = b.scrollTop + b.clientHeight >= b.scrollHeight - 4;
+	}
+	function popFont() { $('pop').style.fontSize = RvipWM.fontSize('msg') + 'px'; placePop(); }
+	function placePop() { if (!$('pop').hidden && rects.map && L) RvipWM.popup($('pop'), { x: L.tile / 2 }); }
+
 	function makePane(p, cols, rows) {
-		var cv = p === P_POP ? document.querySelector('#pop canvas') : document.querySelector('#t-' + WIN[p] + ' canvas');
 		var n = cols * rows;
-		panes[p] = { cv: cv, cols: cols, rows: rows, vc: 1, vr: 1, ch_: new Int32Array(n).fill(32),
+		panes[p] = { cv: document.querySelector('#t-map canvas'), cols: cols, rows: rows, ch_: new Int32Array(n).fill(32),
 			t: new Int32Array(n).fill(-1) };
 		shape(p);
 	}
 
 	function draw(p, y, x) {
 		var T = panes[p], c = T.ctx, i = y * T.cols + x;
-		if (x >= T.vc || y >= T.vr) return;                 /* outside the trimmed canvas */
 		var ch = T.ch_[i], t = T.t[i];
-		var px = T.pad + x * T.cw, py = T.pad + y * T.ch;
+		var px = x * T.cw, py = y * T.ch;
 		/* chtype: char, colour (bits 8-10, set flag 0x800), standout 0x1000, bold 0x2000, underline 0x4000 */
 		var col = (ch & 0x800) ? (ch >> 8) & 7 : 7;
 		if (!col) col = 7;
@@ -105,29 +124,21 @@
 			c.drawImage(tiles, (t % 32) * TW, ((t / 32) | 0) * TH, TW, TH, px, py, T.cw, T.ch);
 			return;
 		}
-		var ic = p === P_INV && T.rowIcon ? T.rowIcon[y] : -1;
-		if (ic >= 0 && tilesReady && x >= 2 && x <= 4) {   /* the tile's 1:2 shape, centred on cols 2-4, clipped per cell */
-			var ih = Math.min(T.ch, 6 * T.cw), iw = ih / 2, ix = T.pad + 2 * T.cw + (3 * T.cw - iw) / 2;
-			c.save(); c.beginPath(); c.rect(px, py, T.cw, T.ch); c.clip();
-			c.drawImage(tiles, (ic % 32) * TW, ((ic / 32) | 0) * TH, TW, TH, ix, py + (T.ch - ih) / 2, iw, ih);
-			c.restore();
-			return;
-		}
 		if (ch & 0x4000) { c.fillStyle = fg; c.fillRect(px, py + T.ch - 1, T.cw, 1); }
 		var k = ch & 0xff;
 		if (k > 32) {
-			c.font = (ch & 0x2000) && p !== P_MAP ? 'bold ' + T.font : T.font;
+			c.font = T.font;
 			c.textAlign = 'center'; c.textBaseline = 'middle';
-			c.fillStyle = inv ? BG : (T.rowFg && T.rowFg[y]) || fg;
+			c.fillStyle = inv ? BG : fg;
 			c.fillText(String.fromCharCode(k), px + T.cw / 2, py + T.ch / 2 + 1);
 		}
 	}
 
 	function drawCursor() {
 		var T = panes[cur.p];
-		if (!T || cur.y >= T.rows || cur.x >= T.cols) return;
-		if (cur.p === P_MAP && cur.y === hero.y && cur.x === hero.x) return;   /* the hero is marker enough */
-		var c = T.ctx, px = T.pad + cur.x * T.cw, py = T.pad + cur.y * T.ch;
+		if (cur.p !== P_MAP || !T || cur.y >= T.rows || cur.x >= T.cols) return;
+		if (cur.y === hero.y && cur.x === hero.x) return;   /* the hero is marker enough */
+		var c = T.ctx, px = cur.x * T.cw, py = cur.y * T.ch;
 		c.fillStyle = c.strokeStyle = FG;
 		if (tilesReady && T.t[cur.y * T.cols + cur.x] >= 0) { c.lineWidth = 1; c.strokeRect(px + 0.5, py + 0.5, T.cw - 1, T.ch - 1); }
 		else c.fillRect(px, py + T.ch - 2, T.cw, 2);
@@ -153,7 +164,7 @@
 		var A = areaSize(), W = A.w, H = A.h;
 		if (W < 400 || H < 300) { W = 1280; H = 720; }
 		var font = RvipWM.fontSize('stat'), tile = TILE_STEPS[0];
-		var sideW = SIDE_COLS * measure(font) + BORDER + 4;
+		var sideW = Math.ceil(SIDE_COLS * font * 0.6) + BORDER + 12;   /* ~0.6em per monospace cell */
 		TILE_STEPS.forEach(function (t) { if (MAP_COLS * t / 2 + BORDER <= W - sideW - GUT && MAP_ROWS * t + BORDER <= H * 0.72) tile = t; });
 		var mapH = MAP_ROWS * tile + BORDER;
 		return { v: 1, tile: tile, auto: true,
@@ -200,28 +211,12 @@
 		el.style.width = Math.max(0, r[2]) + 'px'; el.style.height = Math.max(0, r[3]) + 'px';
 	}
 
-	/* Show a canvas at its size, or scaled down to fit its window (never clipped) */
+	/* the map never shrinks: bigger than its window, it scrolls with the hero */
 	function fit(p) {
-		var T = panes[p];
-		if (!T) return;
-		var box;
-		if (p === P_POP) {
-			if (!rects.map) return;
-			var A = RvipWM.popupBox();
-			box = { w: A.w - L.tile, h: A.h };
-		} else {
-			var r = rects[WIN[p]];
-			if (!r) return;
-			box = { w: r[2] - BORDER, h: r[3] - BORDER - ($('game').classList.contains('wm-single') ? 0 : TITLE_H) };
-		}
-		/* the map never shrinks: bigger than its window, it scrolls with the hero */
-		if (p === P_MAP) { T.box = box; scrollMap(true); return; }
-		/* text windows: the font size is the user's; the canvas is shown 1:1 and
-		 * the window scrolls (pop-up: scaled down to fit over the map) */
-		var sc = p === P_POP ? Math.min(1, box.w / T.w, box.h / T.h) : 1;
-		T.cv.style.width = T.w * sc + 'px';
-		T.cv.style.height = T.h * sc + 'px';
-		if (p === P_POP) RvipWM.popup($('pop'), { x: L.tile / 2 });
+		var T = panes[p], r = rects.map;
+		if (!T || !r) return;
+		T.box = { w: r[2] - BORDER, h: r[3] - BORDER - ($('game').classList.contains('wm-single') ? 0 : TITLE_H) };
+		scrollMap(true);
 	}
 
 	var hero = { y: 0, x: 0 }, off = { x: 0, y: 0 };
@@ -234,7 +229,7 @@
 		off = RvipWM.center(T.cv, (hero.x + 0.5) * T.cw, (hero.y + 0.5) * T.ch, T.w, T.h, T.box.w, T.box.h);
 	}
 
-	var wm = null, popWin = 'msg';   /* pop-ups follow the last zoomed text window */
+	var wm = null;
 	function applyDom() { if (wm) wm.apply(); }
 	function makeWM() {
 		var s = defaultLayout().split, A = areaSize();
@@ -246,8 +241,9 @@
 			single: { d: 'v', r: line / A.h, a: 'msg', b: { d: 'v', r: 1 - stat / (A.h - line), a: 'map', b: 'stat' } },
 			state: L.wm,
 			save: function (st) { L.wm = st; saveLayout(); },
-			layout: function (r) { rects = r; WIN.forEach(function (id, p) { fit(p); }); fit(P_POP); },
-			zoom: { map: function (size, d) { zoomMap(d); }, msg: zoomText, stat: zoomText, inv: zoomText },
+			layout: function (r) { rects = r; fit(P_MAP); placePop(); },
+			/* A- / A+: the map steps its tiles; the text windows are the WM's; the pop-up follows Messages */
+			zoom: { map: function (size, d) { zoomMap(d); }, msg: popFont },
 			onReset: resetLayout
 		});
 		wm.apply();
@@ -262,17 +258,10 @@
 		setTimeout(function () { status(''); }, 1200);
 	}
 
-	/* a text pane's A− / A+: the WM keeps the size; redraw that pane at it */
-	function zoomText() {
-		for (var p = 1; p < WIN.length; p++) if (panes[p] && RvipWM.fontSize(WIN[p]) !== panes[p].fs) { popWin = WIN[p]; shape(p); }
-		if (panes[P_POP]) shape(P_POP);
-		applyDom();
-	}
-
 	function resetLayout() {
 		var a = L.audio, fc = L.face, mf = L.mapFace, ts = L.tiles;
 		L = defaultLayout(); L.audio = a; L.face = fc; L.mapFace = mf; L.tiles = ts; L.wm = wm.state();
-		for (var p = 0; p < panes.length; p++) if (panes[p]) shape(p);
+		shape(P_MAP); popFont();
 		applyDom(); saveLayout();
 	}
 
@@ -314,8 +303,8 @@
 	var ln = {
 		init: function (p, cols, rows) {
 			if (!L) loadLayout();
-			makePane(p, cols, rows);
-			if (p === P_INV) { $('game').hidden = false; makeWM(); for (var q = 1; q <= P_INV; q++) shape(q); }
+			if (p === P_MAP) makePane(p, cols, rows); else textPane(p);
+			if (p === P_INV) { $('game').hidden = false; makeWM(); applyFace(); popFont(); }
 		},
 		put: function (p, y, x, ch, t) {
 			var T = panes[p];
@@ -324,43 +313,39 @@
 			T.ch_[i] = ch; T.t[i] = t;
 			draw(p, y, x);
 		},
-		extent: function (p, c, r) {   /* the game's trimmed size of a text pane */
-			var T = panes[p];
-			if (!T || (T.vc === c && T.vr === r)) return;
-			T.vc = c; T.vr = r; shape(p);
+		cursor: function (p, y, x) {
+			var o = cur.p, oy = cur.y;
+			cur.p = p; cur.y = y; cur.x = x;
+			if (txt[o] && (o !== p || oy !== y)) drawRow(o, oy);
+			if (txt[p]) drawRow(p, y);
 		},
-		cursor: function (p, y, x) { cur.p = p; cur.y = y; cur.x = x; },
+		line: function (p, y, s, c, t) {
+			var T = txt[p];
+			if (!T) return;
+			if (p === P_MSG) msgMark();
+			T.lines[y] = s; T.css[y] = c; T.tile[y] = t;
+			if (y < T.n) drawRow(p, y);
+		},
+		rows: function (p, n) { if (!txt[p]) return; if (p === P_MSG) msgMark(); setRows(p, n); },
 		popup: function (rows, cols) {
-			if (!rows) { $('pop').hidden = true; panes[P_POP] = null; if (cur.p === P_POP) cur.p = -1; return; }
-			makePane(P_POP, cols, rows);
+			if (!rows) { $('pop').hidden = true; if (cur.p === P_POP) cur.p = -1; return; }
+			textPane(P_POP);
 			$('pop').hidden = false;
-			fit(P_POP);
 		},
 		flush: function (level, hy, hx) {
 			var town = level === 0;
+			var mb = txt[P_MSG] && txt[P_MSG].el.parentNode;   /* follow the newest message unless scrolled up */
+			if (mb && (ln.follow || keyFollow)) mb.scrollTop = mb.scrollHeight;
+			ln.follow = null; keyFollow = false;
+			placePop();
 			if (level < 0) return;                  /* no living character */
 			if (hy !== hero.y || hx !== hero.x) { hero.y = hy; hero.x = hx; scrollMap(level !== audio.level); }
 			/* the cursor is drawn over the cell; redraw that cell next time */
 			if (ln.lastCur && panes[ln.lastCur.p]) draw(ln.lastCur.p, ln.lastCur.y, ln.lastCur.x);
 			drawCursor();
 			ln.lastCur = cur.p >= 0 ? { p: cur.p, y: cur.y, x: cur.x } : null;
-			var mb = document.querySelector('#t-msg .body');
-			if (mb && msgStick) mb.scrollTop = mb.scrollHeight;   /* the newest message stays in view */
 			audio.level = level;
 			if (!!town !== audio.town) { audio.town = !!town; updateMusic(); }
-		},
-		invfg: function (y, c, t) {   /* the game's colour and icon tile for an inventory row */
-			var T = panes[P_INV];
-			if (!T || y >= T.rows) return;
-			(T.rowFg = T.rowFg || [])[y] = c;
-			(T.rowIcon = T.rowIcon || [])[y] = t;
-			for (var x = 0; x < T.cols; x++) draw(P_INV, y, x);
-		},
-		rowfg: function (p, y, c) {   /* the game's colour for a pop-up row */
-			var T = panes[p];
-			if (!T || y >= T.rows) return;
-			(T.rowFg = T.rowFg || [])[y] = c;
-			for (var x = 0; x < T.cols; x++) draw(p, y, x);
 		},
 		icons: function () { return tilesReady ? 1 : 0; },
 		vis: function (s) { RvipWM.visible(document.querySelector('#t-vis .body'), s, visIcon); },
@@ -475,7 +460,8 @@
 		L.tiles = TILESETS[tileset][1]; saveLayout();
 		renderTileset();
 		var redraw = function () {
-			[P_MAP, P_INV].forEach(function (p) { if (panes[p]) shape(p); });
+			if (panes[P_MAP]) shape(P_MAP);
+			if (txt[P_INV]) for (var y = 0; y < txt[P_INV].n; y++) drawRow(P_INV, y);
 			var vb = document.querySelector('#t-vis .body');
 			if (vb && vb._vis != null) { var s = vb._vis; vb._vis = null; ln.vis(s); }
 			if (ln.atCmd) events.push(12);   /* ^L: the game redraws, the Inventory gets or drops its icons */
@@ -499,12 +485,16 @@
 	}
 	/* text font: a face from the index page's fonts/ (web/build.sh lists them) */
 	function loadFace(n, now) {
-		var redraw = function () { for (var p = 0; p < panes.length; p++) if (panes[p]) shape(p); document.querySelector('#t-vis .body').style.fontFamily = L.face ? '"' + L.face + '", monospace' : ''; applyDom(); };
+		var redraw = function () { if (panes[P_MAP]) shape(P_MAP); applyFace(); applyDom(); };
 		if (!n) { if (now) redraw(); return; }
 		var ff = new FontFace(n, 'url(../fonts/' + n + '.woff)');
 		ff.load().then(function () { document.fonts.add(ff); redraw(); }).catch(function () { status('Could not load the font ' + n + '.', true); });
 	}
-	/* Visible window icon: the tile (8x16) as a CSS sprite */
+	/* the top-bar font on every text window and the pop-up */
+	function applyFace() {
+		['#t-stat .body', '#t-msg .body', '#t-inv .body', '#t-vis .body', '#pop'].forEach(function (q) { var e = document.querySelector(q); if (e) e.style.fontFamily = face(P_STATUS); });
+	}
+	/* Visible and Inventory icon: the tile (8x16) as a CSS sprite */
 	function visIcon(t) {
 		if (!tilesReady || !(t >= 0)) return null;
 		var s = document.createElement('i');

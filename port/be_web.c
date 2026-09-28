@@ -13,11 +13,8 @@
 
 int savegame(char *);  /* diag.c */
 
-static const char *rowfg_sent[64]; /* be_rowfg: colour last sent per pop-up row */
 EM_JS(void, js_init, (int p, int c, int r), { Module.ln.init(p, c, r); });
 EM_JS(void, js_put, (int p, int y, int x, int ch, int t), { Module.ln.put(p, y, x, ch, t); });
-EM_JS(void, js_extent, (int p, int c, int r), { Module.ln.extent(p, c, r); });
-void be_extent(int p, int cols, int rows) { js_extent(p, cols, rows); }
 EM_JS(void, js_cursor, (int p, int y, int x), { Module.ln.cursor(p, y, x); });
 EM_JS(void, js_popup, (int r, int c), { Module.ln.popup(r, c); });
 EM_JS(void, js_flush, (int lvl, int hy, int hx), { Module.ln.flush(lvl, hy, hx); });
@@ -46,25 +43,17 @@ EM_JS(void, js_end, (int saved), { Module.ln.end(saved); });
 void be_init(int p, int cols, int rows) { js_init(p, cols, rows); }
 void be_put(int p, int y, int x, chtype ch, int tile) { js_put(p, y, x, (int)ch, tile); }
 void be_cursor(int p, int y, int x) { js_cursor(p, y, x); }
-void be_popup(int rows, int cols) { memset(rowfg_sent, 0, sizeof rowfg_sent); js_popup(rows, cols); }
+void be_popup(int rows, int cols) { js_popup(rows, cols); }
 void be_sound(const char *event) { js_sound(event); }
 
 /* Visible window (RVIP 5b): the monsters and objects drawn on the map. A
  * monster counts when the map shows its letter at its cell (Larn draws the
  * ones moving through explored cells, not only those next to the player),
  * the same test explore uses to stop; nearest first. */
-EM_JS(void, js_invfg, (int y, const char *c, int t), { Module.ln.invfg(y, UTF8ToString(c), t); });
-void be_invfg(int y, const char *css, int tile)
-{
-    static const char *last[64];
-    static int lastt[64];
-    if (y < 64 && (last[y] != css || lastt[y] != tile)) { last[y] = css; lastt[y] = tile; js_invfg(y, css, tile); }
-}
-EM_JS(void, js_rowfg, (int p, int y, const char *c), { Module.ln.rowfg(p, y, UTF8ToString(c)); });
-void be_rowfg(int p, int y, const char *css)
-{
-    if (y < 64 && rowfg_sent[y] != css) { rowfg_sent[y] = css; js_rowfg(p, y, css); }
-}
+EM_JS(void, js_line, (int p, int y, const char *s, const char *c, int t), { Module.ln.line(p, y, UTF8ToString(s), UTF8ToString(c), t); });
+void be_line(int p, int y, const char *s, const char *css, int tile) { js_line(p, y, s, css, tile); }
+EM_JS(void, js_rows, (int p, int n), { Module.ln.rows(p, n); });
+void be_rows(int p, int n) { js_rows(p, n); }
 EM_JS(int, js_icons, (void), { return Module.ln.icons(); });
 int be_icons(void) { return js_icons(); }
 EM_JS(void, js_vis, (const char *s), { if (Module.ln.vis) Module.ln.vis(UTF8ToString(s)); });

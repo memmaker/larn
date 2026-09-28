@@ -50,10 +50,18 @@
 	.win > .t:hover .zoom { visibility: visible; }
 	.win > .t .zoom button { padding: 0 5px; font-size: 11px; line-height: 14px; height: 16px; }
 	.win > .body { flex: 1; min-height: 0; overflow: hidden; }
-	#t-msg .body, #t-stat .body, #t-inv .body { overflow: auto; }   /* text at the chosen size, never scaled */
 	.win canvas { display: block; }
 	#pop { position: absolute; z-index: 3; background: #000; border: 1px solid var(--dim); box-shadow: 0 6px 24px rgba(0,0,0,.7); }
-	#pop canvas { display: block; }
+	#t-msg .body { overflow: auto; }   /* newest message kept in view (larn.js) */
+	/* text windows: lines from the game (larn.js), sized by the WM's A−/A+ on the body */
+	.txt { margin: 0; padding: 2px 4px; font: inherit; font-size: 1em; line-height: 1.3; color: #dcdcdc; white-space: pre; }
+	.txt > div { min-height: 1.3em; }
+	.txt .so { background: #dcdcdc; color: #000; }
+	.txt .cur { box-shadow: inset 0 -2px #dcdcdc; }
+	#t-inv .body > div { white-space: pre; min-height: 1.45em; color: #dcdcdc; }
+	#t-inv .body .cur { box-shadow: inset 0 -2px #dcdcdc; }
+	#pop { overflow: auto; font-family: monospace; }
+	#pop .txt { padding: 0 1ch; }
 	#pop[hidden] { display: none; }
 	.split { position: absolute; background: var(--gut); z-index: 2; touch-action: none; }
 	.split.v { cursor: col-resize; }
@@ -124,11 +132,11 @@
 
 <div id="game" hidden>
 	<div class="win" id="t-map"><div class="t"><span class="name">Map</span></div><div class="body"><canvas></canvas></div></div>
-	<div class="win" id="t-stat"><div class="t"><span class="name">Status</span></div><div class="body"><canvas></canvas></div></div>
-	<div class="win" id="t-msg"><div class="t"><span class="name">Messages</span></div><div class="body"><canvas></canvas></div></div>
-	<div class="win" id="t-inv"><div class="t"><span class="name">Inventory</span></div><div class="body"><canvas></canvas></div></div>
+	<div class="win" id="t-stat"><div class="t"><span class="name">Status</span></div><div class="body"><pre class="txt"></pre></div></div>
+	<div class="win" id="t-msg"><div class="t"><span class="name">Messages</span></div><div class="body"><pre class="txt"></pre></div></div>
+	<div class="win" id="t-inv"><div class="t"><span class="name">Inventory</span></div><div class="body wm-list"></div></div>
 	<div class="win" id="t-vis"><div class="t"><span class="name">Visible</span></div><div class="body wm-list"></div></div>
-	<div id="pop" hidden><canvas></canvas></div>
+	<div id="pop" hidden><pre class="txt"></pre></div>
 </div>
 
 <div id="help" hidden>

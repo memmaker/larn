@@ -190,26 +190,53 @@ static chtype at(WINDOW *w, int y, int x) { return w->c[y * w->maxx + x]; }
 
 static int pop_h, pop_w;
 
+/* Text panes go out as whole lines (RVIP W0 rules 5, 6): each changed row
+ * once, trimmed, standout between \x01 and \x02, with the row's colour and
+ * icon tile; and the rows in use (to the last non-blank row or the cursor),
+ * so the page shows no empty lines at the bottom. */
+#define RMAX 128
+static const char *rcss[NPANES][RMAX];
+static int rtile[NPANES][RMAX], rows_sent[NPANES], cur_p = -1, cur_y;
+
+void wc_rowattr(int p, int y, const char *css, int tile)
+{
+    WINDOW *w = pn[p];
+    if (!css) css = "";
+    if (!w || y < 0 || y >= w->maxy || y >= RMAX) return;
+    if (rcss[p][y] && !strcmp(rcss[p][y], css) && rtile[p][y] == tile) return;
+    rcss[p][y] = css; rtile[p][y] = tile;
+    touch(w, y, 0);
+}
+
+static void cursor(int p, int y, int x) { cur_p = p; cur_y = y; be_cursor(p, y, x); }
+
+static int blank(chtype ch) { return (ch & A_CHARTEXT) == ' ' && !(ch & A_STANDOUT); }
+
 static void pflush(int i)
 {
     WINDOW *p = pn[i];
-    int y, x;
-    for (y = 0; p && y < p->maxy; y++) {
+    int y, x, used = 0;
+    if (!p) return;
+    for (y = 0; y < p->maxy; y++)
+        for (x = 0; x < p->maxx; x++)
+            if (!blank(p->c[y * p->maxx + x])) used = y + 1;
+    if (cur_p == i && cur_y >= used) used = cur_y + 1;
+    if (used != rows_sent[i]) be_rows(i, rows_sent[i] = used);
+    for (y = 0; y < p->maxy; y++) {
+        char buf[2 * 512 + 2];
+        int n = 0, so = 0, end = p->maxx;
         if (p->first[y] < 0) continue;
-        for (x = p->first[y]; x <= p->last[y]; x++) be_put(i, y, x, p->c[y * p->maxx + x], -1);
         p->first[y] = p->last[y] = -1;
-    }
-    /* text panes are sent trimmed (RVIP W0): the cells in use, no blank
-     * columns after the text and no empty rows below it */
-    if (p && i != P_POP) {
-        static int ext_c[NPANES], ext_r[NPANES];
-        int cols = 0, rows = 0;
-        for (y = 0; y < p->maxy; y++)
-            for (x = 0; x < p->maxx; x++) {
-                chtype ch = p->c[y * p->maxx + x];
-                if ((ch & A_CHARTEXT) > ' ' || (ch & A_STANDOUT)) { if (x + 1 > cols) cols = x + 1; rows = y + 1; }
-            }
-        if (cols != ext_c[i] || rows != ext_r[i]) { ext_c[i] = cols; ext_r[i] = rows; be_extent(i, cols ? cols : 1, rows ? rows : 1); }
+        while (end > 0 && blank(p->c[y * p->maxx + end - 1])) end--;
+        for (x = 0; x < end && x < 512; x++) {
+            chtype ch = p->c[y * p->maxx + x];
+            int c = ch & A_CHARTEXT, s = (ch & A_STANDOUT) != 0;
+            if (s != so) buf[n++] = (so = s) ? 1 : 2;
+            buf[n++] = c < 32 || c > 126 ? ' ' : c;
+        }
+        if (so) buf[n++] = 2;
+        buf[n] = 0;
+        be_line(i, y, buf, y < RMAX && rcss[i][y] ? rcss[i][y] : "", y < RMAX && rcss[i][y] ? rtile[i][y] : -1);
     }
 }
 
@@ -316,14 +343,16 @@ static void pop_refresh(void)
         be_popup(pop_h, pop_w);
         delwin(pn[P_POP]);
         pn[P_POP] = newwin(pop_h, pop_w, 0, 0);
+        memset(rcss[P_POP], 0, sizeof rcss[P_POP]);
+        rows_sent[P_POP] = 0;
     } else {
         untouch(pn[P_POP]);
     }
     for (y = y0; y <= y1; y++) {
         for (x = x0; x <= x1; x++) set(pn[P_POP], y - y0, x - x0, at(stdscr, y, x));
-        be_rowfg(P_POP, y - y0, rowfg[y] ? rowfg[y] : "");
+        wc_rowattr(P_POP, y - y0, rowfg[y], -1);
     }
-    if (cy >= y0 && cy <= y1 && cx >= x0 && cx <= x1) be_cursor(P_POP, cy - y0, cx - x0);
+    if (cy >= y0 && cy <= y1 && cx >= x0 && cx <= x1) cursor(P_POP, cy - y0, cx - x0);
 }
 
 static void dump(FILE *f, const char *name, WINDOW *p)
@@ -341,7 +370,7 @@ int wrefresh(WINDOW *w)
     int cy = stdscr->cury, cx = stdscr->curx, i;
     const char *d;
     if (w != stdscr) return OK;
-    be_cursor(-1, 0, 0);
+    cursor(-1, 0, 0);
     if (mode != M_FULL) msg_refresh();
     if (mode == M_DUNGEON) close_popup();
     else pop_refresh();
@@ -350,7 +379,7 @@ int wrefresh(WINDOW *w)
         wc_status(pn[P_STATUS]);
         wc_inv(pn[P_INV]);
     }
-    if (mode != M_FULL && cy == live) be_cursor(P_MSG, nhist, cx);
+    if (mode != M_FULL && cy == live) cursor(P_MSG, nhist, cx);
     untouch(stdscr);
     for (i = P_STATUS; i < NPANES; i++)
         if (i != P_POP || pop_h) pflush(i);

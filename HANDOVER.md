@@ -65,3 +65,10 @@
   every monster the map shows (same test as explore's stop), nearest first. Web keeps 100
   message rows; Messages follows the newest line unless the player scrolled up (a key
   follows again) — before, every 50 ms key poll snapped it to the bottom.
+- 2026-09-28 RVIP W0 rule 6: text windows are HTML. The shim sends each changed row of Status,
+  Messages, Inventory and the pop-up once, trimmed, standout between \x01/\x02, with its colour
+  and icon tile (`be_line`), plus the rows in use (`be_rows`, replaces `be_extent`); row colour and
+  icon via `wc_rowattr` (replaces `be_invfg`/`be_rowfg`), every cursor through `cursor()`. The page
+  shows `<pre class="txt">` / `.wm-list` rows (Inventory icons: CSS sprites from tiles.png); the
+  pop-up is a `<pre>` in `#pop` at the Messages size. Only the map is a canvas. Text panes lose
+  per-cell colours (row colour only); X11/terminal draw `be_line` per cell (no colour there now).

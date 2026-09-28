@@ -115,7 +115,17 @@ void be_put(int p, int y, int x, chtype ch, int tile)
 }
 
 void be_cursor(int p, int y, int x) { curP = p; curY = y; curX = x; }
-void be_extent(int p, int cols, int rows) { P[p].ec = cols; P[p].er = rows; full = 1; }
+void be_rows(int p, int rows) { P[p].er = rows; full = 1; }
+void be_line(int p, int y, const char *s, const char *css, int tile)
+{
+    chtype so = 0;
+    int x;
+    (void)css; (void)tile;
+    for (x = 0; x < P[p].cols; x++) {
+        while (*s == 1 || *s == 2) so = *s++ == 1 ? A_STANDOUT : 0;
+        be_put(p, y, x, (*s ? (unsigned char)*s++ : ' ') | so, -1);
+    }
+}
 void be_prompt(const char *s) { snprintf(prompt, sizeof prompt, "%s", s); }
 
 static void blit(int p, int y0, int x0, int rows, int cols)
@@ -281,7 +291,5 @@ int be_getkey(int wait)
 
 void be_end(void) { term_stop(); }
 void be_sound(const char *s) { (void)s; }
-void be_invfg(int y, const char *css, int tile) { (void)y; (void)css; (void)tile; }
-void be_rowfg(int p, int y, const char *css) { (void)p; (void)y; (void)css; }
 int be_icons(void) { return 0; }
 

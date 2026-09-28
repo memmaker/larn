@@ -36,7 +36,7 @@ int tile_for(int y, int x, chtype ch)
     return obj_tile[o];
 }
 
-static int ln;
+static int ln, lpane, ltile = -1; /* ltile: icon of the next row */
 
 static const char *trim(const char *s)
 {
@@ -44,13 +44,14 @@ static const char *trim(const char *s)
     return s;
 }
 
-static void line(WINDOW *w, chtype attr, const char *s)
+/* one row of a text pane; its colour goes with it (wc_rowattr, RVIP W0) */
+static void line(WINDOW *w, const char *css, const char *s)
 {
     if (ln >= w->maxy) return;
+    wc_rowattr(lpane, ln, css, ltile);
+    ltile = -1;
     wmove(w, ln++, 0);
-    w->attr = attr;
     while (*s && w->curx < w->maxx - 1) waddch(w, (unsigned char)*s++);
-    w->attr = 0;
     wclrtoeol(w);
 }
 
@@ -59,39 +60,39 @@ void wc_status(WINDOW *w)
     char b[128];
     const char *e;
     int i, x = 0;
-    ln = 0;
+    ln = 0; lpane = P_STATUS;
     snprintf(b, sizeof b, "%s, %s", logname, c[LEVEL] > 0 ? trim(classname[c[LEVEL] - 1]) : "");
-    line(w, A_BOLD, b);
+    line(w, "", b);
     snprintf(b, sizeof b, "Level %ld   Exp %ld", c[LEVEL], c[EXPERIENCE]);
-    line(w, 0, b);
+    line(w, "", b);
     snprintf(b, sizeof b, "HP %ld(%ld)   Spells %ld(%ld)", c[HP], c[HPMAX], c[SPELLS], c[SPELLMAX]);
-    line(w, c[HP] * 4 < c[HPMAX] ? COLOR_PAIR(COLOR_RED) | A_BOLD : 0, b);
+    line(w, c[HP] * 4 < c[HPMAX] ? "#f14c4c" : "", b);
     snprintf(b, sizeof b, "AC %ld   WC %ld", c[AC], c[WCLASS]);
-    line(w, 0, b);
+    line(w, "", b);
     snprintf(b, sizeof b, "STR %ld  INT %ld  WIS %ld", c[STRENGTH] + c[STREXTRA], c[INTELLIGENCE], c[WISDOM]);
-    line(w, 0, b);
+    line(w, "", b);
     snprintf(b, sizeof b, "CON %ld  DEX %ld  CHA %ld", c[CONSTITUTION], c[DEXTERITY], c[CHARISMA]);
-    line(w, 0, b);
+    line(w, "", b);
     snprintf(b, sizeof b, "Gold %ld", c[GOLD]);
-    line(w, COLOR_PAIR(COLOR_YELLOW), b);
+    line(w, "#e5e510", b);
     snprintf(b, sizeof b, "Dungeon: %s", trim(levelname[level]));
-    line(w, 0, b);
+    line(w, "", b);
     snprintf(b, sizeof b, "Time: %ld mobuls left", (TIMELIMIT - gtime) / 100);
-    line(w, 0, b);
-    line(w, 0, "");
+    line(w, "", b);
+    line(w, "", "");
     /* active effects, as many per line as fit */
     b[0] = 0;
     for (i = 0; (e = bot_effect(i)); i++) {
         if (!*e) continue;
         if (x + (int)strlen(e) + 2 > w->maxx - 1) {
-            line(w, COLOR_PAIR(COLOR_CYAN), b);
+            line(w, "#11a8cd", b);
             b[0] = 0;
             x = 0;
         }
         x += snprintf(b + x, sizeof b - x, "%s%s", x ? ", " : "", e);
     }
-    if (x) line(w, COLOR_PAIR(COLOR_CYAN), b);
-    while (ln < w->maxy) line(w, 0, "");
+    if (x) line(w, "#11a8cd", b);
+    while (ln < w->maxy) line(w, "", "");
 }
 
 /* Same text as inventoryline_print() (inventory.c) */
@@ -145,23 +146,22 @@ int wc_montile(int m)
     return m > 0 && m < (int)(sizeof mon_tile / sizeof mon_tile[0]) ? mon_tile[m] : -1;
 }
 
-/* Rows "a)   name" with a tile set (the frontend puts the icon on cols 2-4),
+/* Rows "a) name" with a tile set (the page puts the icon first),
  * "a) ! name" in text mode (the item's own symbol) */
 void wc_inv(WINDOW *w)
 {
     char b[160], n[160];
     int i, icons = be_icons();
-    ln = 0;
-    line(w, A_BOLD, "Inventory");
+    ln = 0; lpane = P_INV;
+    line(w, "", "Inventory");
     for (i = 0; i < MAXINVEN; i++) {
         int t = wc_objtile(iven[i]);
         if (!iven[i]) continue;
         item_name(n, sizeof n, i);
-        if (icons && t >= 0) snprintf(b, sizeof b, "%.3s  %s", n, n + 3);
+        if (icons && t >= 0) snprintf(b, sizeof b, "%s", n);
         else snprintf(b, sizeof b, "%.3s%c %s", n, objnamelist[iven[i]], n + 3);
-        line(w, c[WIELD] == i || c[WEAR] == i || c[SHIELD] == i ? A_BOLD : 0, b);
-        be_invfg(ln - 1, wc_css(iven[i]), icons ? t : -1);
+        ltile = icons ? t : -1;
+        line(w, wc_css(iven[i]), b);
     }
-    for (i = ln; i < w->maxy; i++) be_invfg(i, "", -1);
-    while (ln < w->maxy) line(w, 0, "");
+    while (ln < w->maxy) line(w, "", "");
 }
