@@ -50,6 +50,7 @@
 	.win > .t:hover .zoom { visibility: visible; }
 	.win > .t .zoom button { padding: 0 5px; font-size: 11px; line-height: 14px; height: 16px; }
 	.win > .body { flex: 1; min-height: 0; overflow: hidden; }
+	#t-msg .body, #t-stat .body, #t-inv .body { overflow: auto; }   /* text at the chosen size, never scaled */
 	.win canvas { display: block; }
 	#pop { position: absolute; z-index: 3; background: #000; border: 1px solid var(--dim); box-shadow: 0 6px 24px rgba(0,0,0,.7); }
 	#pop canvas { display: block; }
