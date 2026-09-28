@@ -469,6 +469,7 @@
 	tiles.onerror = function () { tilesFinished(false); };
 	/* tile sets: the Amiga tiles or none (text); a per-browser preference */
 	var TILESETS = [['tiles.png', 'Amiga'], [null, 'None']], tileset = 0;
+	function renderTileset() { var b = $('btn-tiles'); if (b) b.textContent = 'Tiles: ' + TILESETS[tileset][1]; }
 	function toggleTileset() {
 		tileset = (tileset + 1) % TILESETS.length;
 		L.tiles = TILESETS[tileset][1]; saveLayout();
