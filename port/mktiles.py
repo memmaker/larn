@@ -14,7 +14,7 @@ PER_ROW = 32
 MAXMONST_IDS = 65          # 0..64 (DEMONPRINCE)
 MAXOBJECT = 97
 # RL_M object id -> primeau image; None = no tile (drawn as text)
-OBJ_REMAP = {80: 82, 82: 80, 84: None, 93: None, 94: None, 95: None, 96: "wall", 97: None}
+OBJ_REMAP = {21: "wall", 80: 82, 82: 80, 84: None, 93: None, 94: None, 95: None, 96: "wall", 97: None}
 
 names = []
 
