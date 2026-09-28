@@ -332,6 +332,8 @@
 			if (ln.lastCur && panes[ln.lastCur.p]) draw(ln.lastCur.p, ln.lastCur.y, ln.lastCur.x);
 			drawCursor();
 			ln.lastCur = cur.p >= 0 ? { p: cur.p, y: cur.y, x: cur.x } : null;
+			var mb = document.querySelector('#t-msg .body');
+			if (mb) mb.scrollTop = mb.scrollHeight;   /* the newest message stays in view */
 			audio.level = level;
 			if (!!town !== audio.town) { audio.town = !!town; updateMusic(); }
 		},
