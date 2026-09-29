@@ -50,6 +50,8 @@
 
 ## Known limits
 
-- Water, shore, lava and cooled lava have no Amiga tiles: coloured letters.
-- The player tile is the Amiga original (a green block).
+- Water, shore, lava and cooled lava have no Amiga tiles: `port/mktiles.py` recolours the
+  Amiga wall block `w30` for them (TINTS, as NLarn does); `tile_for` accepts their animated
+  letters. Anything else without a same-set tile stays a coloured letter (accepted by the user).
+- The player tile is the Amiga original (a green block), kept on purpose.
 - Digit keys are movement at the command prompt (upstream), so repeat counts don't work.

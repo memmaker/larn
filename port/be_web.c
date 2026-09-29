@@ -80,7 +80,8 @@ static void send_visible(void)
     }
     for (y = 0; y < MAXY; y++)
         for (x = 0; x < MAXX; x++)
-            if ((know[x][y] & KNOWHERE) && item[x][y] && objnamelist[item[x][y]] > ' ' && n < 3900
+            /* objectname[] ends at OCOOKIE: water and lava past it are terrain */
+            if ((know[x][y] & KNOWHERE) && item[x][y] && item[x][y] <= OCOOKIE && objnamelist[item[x][y]] > ' ' && n < 3900
                 && !strchr("#.", objnamelist[item[x][y]]))
                 n += snprintf(buf + n, sizeof buf - n, "I%c%s\t%s\t%d\n", objnamelist[item[x][y]], objectname[item[x][y]], wc_css(item[x][y]), wc_objtile(item[x][y]));
     buf[n] = 0;

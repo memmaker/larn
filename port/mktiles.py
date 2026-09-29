@@ -4,7 +4,9 @@ github.com/primeau/Larn, MIT) into port/tiles.rgba and writes port/tilemap.h.
 
 Tile names follow primeau's Larn: mN = monster N, oN = object N, wN = wall
 with neighbour bits (2 up, 4 right, 8 down, 16 left). Larn 12.x numbering
-matches RL_M except where OBJ_REMAP says so. Run from the repo root."""
+matches RL_M except where OBJ_REMAP says so. Terrain the Amiga set has no
+picture for (water, shore, lava, cooled lava) gets the full wall block w30
+recoloured, as NLarn's port/mktiles.py does (TINTS). Run from the repo root."""
 import struct
 from pathlib import Path
 from PIL import Image
@@ -13,8 +15,17 @@ SRC = Path("port/amiga")
 PER_ROW = 32
 MAXMONST_IDS = 65          # 0..64 (DEMONPRINCE)
 MAXOBJECT = 97
-# RL_M object id -> primeau image; None = no tile (drawn as text)
-OBJ_REMAP = {21: "wall", 80: 82, 82: 80, 84: None, 93: None, 94: None, 95: None, 96: "wall", 97: None}
+# RL_M object id -> primeau image or TINTS name; None = no tile (drawn as text)
+OBJ_REMAP = {21: "wall", 80: 82, 82: 80, 84: None, 93: "water", 94: "shorewater", 95: "lava",
+             96: "wall", 97: "cooledlava"}
+RED, DRED = (255, 0, 0), (156, 0, 0)   # w30's two colours
+# stand-in name -> (base tile, {colour: new colour}), same values as NLarn
+TINTS = {
+    "water": ("w30", {RED: (0, 50, 200), DRED: (0, 10, 110)}),
+    "shorewater": ("w30", {RED: (40, 110, 255), DRED: (0, 40, 170)}),
+    "lava": ("w30", {RED: (255, 170, 0), DRED: (220, 50, 0)}),
+    "cooledlava": ("w30", {RED: (90, 45, 35), DRED: (50, 30, 25)}),
+}
 
 names = []
 
@@ -29,14 +40,18 @@ mon = [add(f"m{i}") for i in range(MAXMONST_IDS)]
 obj = []
 for i in range(MAXOBJECT + 1):
     r = OBJ_REMAP.get(i, i)
-    obj.append(-2 if r == "wall" else -1 if r is None else add(f"o{r}"))
+    obj.append(-2 if r == "wall" else -1 if r is None else add(r if r in TINTS else f"o{r}"))
 wall = [add(f"w{m}") for m in range(0, 32, 2)]
 player = add("player")
 
 rows = (len(names) + PER_ROW - 1) // PER_ROW
 sheet = Image.new("RGBA", (PER_ROW * 8, rows * 16))
 for i, n in enumerate(names):
-    t = Image.open(SRC / f"{n}.png").convert("RGBA")
+    base, cmap = TINTS.get(n, (n, {}))
+    t = Image.open(SRC / f"{base}.png").convert("RGBA")
+    px = t.load()
+    for xy in ((x, y) for x in range(t.width) for y in range(t.height)):
+        px[xy] = cmap.get(px[xy][:3], px[xy][:3]) + px[xy][3:]
     if t.size != (8, 16):  # o90 (Vorpal Blade) is 13x20 upstream
         t = t.resize((8, 16), Image.NEAREST)
     sheet.paste(t, ((i % PER_ROW) * 8, (i // PER_ROW) * 16))

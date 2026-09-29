@@ -29,7 +29,10 @@ int tile_for(int y, int x, chtype ch)
     m = mitem[x][y];
     if (m > 0 && m < (int)(sizeof mon_tile / sizeof mon_tile[0]) && c == monstnamelist[m]) return mon_tile[m];
     o = item[x][y];
-    if (o < 0 || o >= (int)(sizeof obj_tile / sizeof obj_tile[0]) || c != objnamelist[o]) return -1;
+    if (o < 0 || o >= (int)(sizeof obj_tile / sizeof obj_tile[0])) return -1;
+    /* water and lava animate their letters (display.c showcell) */
+    if (c != objnamelist[o] && !((o == OWATER || o == OSHOREWATER || o == OLAVA || o == OCOOLEDLAVA) && strchr("~=^\"`", c)))
+        return -1;
     if (obj_tile[o] == -2)
         return wall_tile[(is_wall(x, y - 1) ? 1 : 0) | (is_wall(x + 1, y) ? 2 : 0) | (is_wall(x, y + 1) ? 4 : 0) |
                          (is_wall(x - 1, y) ? 8 : 0)];
