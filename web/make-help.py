@@ -28,7 +28,7 @@ SAVING = '''<ul>
 <li>When your character dies (or you quit with <kbd>Q</kbd>) the game is over and the save is deleted; the next start begins a new character.</li>
 <li>Each browser keeps <strong>one game</strong>. <em>New game</em> deletes it and starts over.</li>
 <li><em>Export save</em> downloads the save file; <em>Import save</em> loads one. Use them for a backup or to move a game to another browser or computer (the Mac version reads the same file).</li>
-<li>Your name and options (<code>larnopts</code>), the window layout, zoom, the sound/music switches and the high scores are stored in the same browser storage.</li>
+<li>Your name and options (<code>larnopts</code>), the window layout, zoom, the sound switch and the high scores are stored in the same browser storage.</li>
 <li>Private/incognito windows and "clear site data" delete the stored game. Export first if it matters.</li>
 </ul>'''
 
@@ -36,7 +36,7 @@ WEB = '''<ul>
 <li><strong>Windows:</strong> the tiled map with Messages (with history) below it; Status and Inventory on the right. Shops, help, lists and menus pop up over the map.</li>
 <li><strong>Resize windows</strong> by dragging the gaps between them; a text window's contents shrink to fit when it is too small. <em>Reset windows</em> puts everything back.</li>
 <li><strong>Zoom:</strong> <em>A−</em> / <em>A+</em> on the Map title bar (shown on hover) change the size of the map tiles. The map does not have to fit: when it is bigger than its window it scrolls to keep you in view. Hover over a text window's title to show its <em>A−</em> / <em>A+</em> buttons.</li>
-<li><strong>Sound</strong> and <strong>Music</strong> are off until you switch them on in the top bar. Sound effects are from the Dubtrain Angband Sound Pack; music plays in town.</li>
+<li><strong>Sound effects</strong> are off until you switch them on under <em>Audio ▾</em>. Larn never had sounds, so these short effects were synthesized for this port; there is no music.</li>
 <li><strong>Keys:</strong> the arrow keys, the numeric keypad, <kbd>1</kbd>–<kbd>9</kbd> or <kbd>hjklyubn</kbd> move you; the capital letters run.</li>
 <li>Browsers keep a few shortcuts for themselves (<kbd>Ctrl+W</kbd>, <kbd>Ctrl+T</kbd>, <kbd>Ctrl+N</kbd>, and <kbd>Cmd</kbd> shortcuts on a Mac), so those never reach the game.</li>
 <li>If the game ever crashes, a message appears at the top; reload the page to continue from the last autosave.</li>

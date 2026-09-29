@@ -17,7 +17,10 @@
   is the IDBFS mount `/larn/save` with symlinks to the data files.
 - Saves: autosave (`savegame()`) at the command prompt on start, every 2 min and when the tab is
   hidden; `be_end()` (from `clearvt100()`) deletes the save unless the player pressed `S`.
-- Sound: `SOUND("event")` calls in the game (larnfunc.h), Dubtrain samples via `web/sounds.py`.
+- Sound: `SOUND("event")` calls in the game (larnfunc.h); `web/mksounds.py` synthesizes one wav
+  per event at build time (square-wave blips made for Larn). No music (no town loop).
+- Stage 6 sound search (2026-09-29): none upstream (RL_M, larn.org, Amiga source). Donnie Russell's
+  LarnHD/SDL Larn has effects of unknown origin and no licence: not used.
 - Text windows are HTML lines (`be_line`/`be_rows`, row colour/icon via `wc_rowattr`); only the
   map is a canvas. Prompt line: `be_prompt(r)` from `msg_refresh()` (wcurses.c); no command-prompt
   flag exists, so `be_web.c` passes `!wait`.
