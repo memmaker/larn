@@ -4,71 +4,49 @@
 
 - Base: **RL_M** by Gibbon, https://github.com/atsb/RL_M (master, commit 12cefcd), Larn 12.x
   maintained in C89. Licence: The Noah Licence (`docs/LICENSE.txt`, non-commercial).
-- Our changes: `git diff` (game files, all `#ifdef LARN_X11`) plus the new `port/`, `play.sh`.
+- Our changes: `git diff` against the base (game files, `#ifdef LARN_X11`) plus `port/`, `web/`.
 - Tiles: Amiga Larn tiles from larn.org's source, https://github.com/primeau/Larn `src/img/`
   (MIT, `port/amiga/LICENSE`). larn.org has **no sound effects**.
 
-## Build and run
+## Web (main target)
 
-- `./play.sh` (builds `larn-x11` via `make -C port` if missing). Runs in `save/`, where it links
-  the data files from `larnfiles/` and creates `larnopts` (colour on). Saves, scores, checkpoint
-  in `save/`.
-- The plain curses build still works (`make -f Makefile.macos`); none of the hooks are in it.
-- Tiles: `python3 port/mktiles.py` → `port/tiles.rgba`, `port/tilemap.h`.
+- Live: https://ruzzoli.de/roguelikes/larn/ · repo: https://github.com/memmaker/larn (remote `memmaker`).
+- `sh web/build.sh` → `web/dist`, `sh web/deploy.sh`. Shared `rvip-wm.js`, `rvip-app.js`,
+  `rvip-sound.js` come from `~/Games/rvip-tools` at build time (no copies here).
+- `port/be_web.c` is the backend. Data (`larnfiles/`) preloaded to `/larn/data`; the game's cwd
+  is the IDBFS mount `/larn/save` with symlinks to the data files.
+- Saves: autosave (`savegame()`) at the command prompt on start, every 2 min and when the tab is
+  hidden; `be_end()` (from `clearvt100()`) deletes the save unless the player pressed `S`.
+- Sound: `SOUND("event")` calls in the game (larnfunc.h), Dubtrain samples via `web/sounds.py`.
+- Text windows are HTML lines (`be_line`/`be_rows`, row colour/icon via `wc_rowattr`); only the
+  map is a canvas. Prompt line: `be_prompt(r)` from `msg_refresh()` (wcurses.c); no command-prompt
+  flag exists, so `be_web.c` passes `!wait`.
+- Stage 9 beacon (graveyard + leaderboard) is wired in.
 
 ## Port (case R: curses shim with panes)
 
-- `port/curses.h` + `wcurses.c`: in-memory 80×24 stdscr (found via `-Iport`). Routing:
-  map rows 0-16 × cols 0-66 → Map pane (tiles); Status and Inventory panes are built from the
-  game's data (`tiles.c`), not from the screen; message ring rows 20-23 → Messages pane.
-  Mode hooks in the game: `wc_overlay()` in `cl_up()` (io.c) and `t_setup()` (inventory.c),
-  `wc_dungeon()` at the end of `drawscreen()`, `clear()` = full-screen text,
-  `wc_msgnew()` in `lprc()` when the ring starts a new line.
-- `port/be_x11.c`: one X11 window per pane + override-redirect pop-up. Arrows/keypad send
-  digits (Larn's `llgetch()` turns them into hjklyubn). Env: `LARN_SCALE`, `LARN_MAP` etc.,
-  `LARN_DUMP=<file>` writes every pane as text on each refresh (use it for testing).
+- `port/curses.h` + `wcurses.c`: in-memory 80×24 stdscr (found via `-Iport`). Map rows 0-16 ×
+  cols 0-66 → Map pane; Status and Inventory built from game data (`tiles.c`); message ring rows
+  20-23 → Messages. Mode hooks: `wc_overlay()` in `cl_up()` (io.c) and `t_setup()`
+  (inventory.c), `wc_dungeon()` at the end of `drawscreen()`, `wc_msgnew()` in `lprc()`.
 - `port/rvip.c`: explore (`x`), `<`/`>` walking, Enter menu (parsed from `larn.help` page 1),
-  inventory with cursor + item menus, cursor list for every `whatitem()` prompt. Hooked in
-  `parse()` (`rvip_command`) and `whatitem()` (main.c).
-- Other game changes: `nap()` sleeps instead of spinning (idle loop kept a core at 100%);
-  `yylex()` no longer drains typeahead in the X11 build (the item actions queue keys);
-  `larn.help` lists `x`, Enter and the stair walking.
+  inventory + item menus, cursor list for every `whatitem()` prompt. Hooked in `parse()`
+  (`rvip_command`) and `whatitem()` (main.c).
+- Direction prompts (`dirsub()`) read via `ttgetdir()` (io.c): arrows/keypad/digits → hjklyubn.
+- Other game changes: `nap()` sleeps instead of spinning; `yylex()` doesn't drain typeahead in
+  the port build; upstream bug fixed: `lcreat(NULL)` didn't send output back to the terminal.
+- Tiles: `python3 port/mktiles.py` → `port/tiles.rgba`, `port/tilemap.h`.
+
+## Native builds (testing / releases)
+
+- X11: `./play.sh` (builds `larn-x11` via `make -C port`); `LARN_DUMP=<file>` writes every pane
+  as text on each refresh — handy for testing.
+- Terminal: `build-term.sh` (`port/be_term.c`, ANSI escapes); `.github/workflows/release.yml`
+  builds it on a `v*` tag.
+- Plain curses upstream build: `make -f Makefile.macos` (no hooks).
 
 ## Known limits
 
 - Water, shore, lava and cooled lava have no Amiga tiles: coloured letters.
-- The player tile is the Amiga original (a green block). The Desktop icon uses the Eye of Larn.
+- The player tile is the Amiga original (a green block).
 - Digit keys are movement at the command prompt (upstream), so repeat counts don't work.
-
-## Web (RVIP step 7)
-
-- Live: https://ruzzoli.de/roguelikes/larn/ · changes: https://github.com/memmaker/larn
-  (remote `memmaker`), base atsb/RL_M @ 12cefcd.
-- `sh web/build.sh` → `web/dist`, `sh web/deploy.sh`. Template: Umoria's web files.
-- `port/be_web.c` replaces `be_x11.c`. Data (`larnfiles/`) preloaded to `/larn/data`; the
-  game's cwd is the IDBFS mount `/larn/save` with symlinks to the data files, like `play.sh`.
-- Saves: autosave (`savegame()`) at the command prompt on start, every 2 min and when the tab
-  is hidden; `be_end()` (from `clearvt100()`) deletes the save unless the player pressed `S`.
-- Sound: `SOUND("event")` calls in the game (larnfunc.h), Dubtrain samples via `web/sounds.py`.
-- Upstream bug fixed on the way: `lcreat(NULL)` didn't send output back to the terminal, so
-  after any mid-game save (checkpoint, autosave) the screen stopped updating.
-- Prompt line (RVIP step 5 / W4, 2026-09-26): the live message row is shown in a
-  box over the map by `RvipWM.prompt` (rvip-wm.js). A key hides it only while
-  the game waits for a command, so a question stays up until answered.
-  Here: `be_prompt(r)` from `msg_refresh()` in `port/wcurses.c` (the `live` row
-  of stdscr); no command-prompt flag exists, so `port/be_web.c` passes `!wait`
-  (the command prompt is the caller that polls).
-- 2026-09-28 fixes: direction prompts (`dirsub()`) read with `ttgetdir()` (io.c), which
-  turns arrows/keypad/digits into hjklyubn like the command prompt (raw `ttgetch()` ignored
-  them, so Open/Close/spells hung). `msg_refresh()` sends `""` before a new message so
-  rvip-wm.js shows the prompt line again for a repeat of the text a key hid. Visible lists
-  every monster the map shows (same test as explore's stop), nearest first. Web keeps 100
-  message rows; Messages follows the newest line unless the player scrolled up (a key
-  follows again) — before, every 50 ms key poll snapped it to the bottom.
-- 2026-09-28 RVIP W0 rule 6: text windows are HTML. The shim sends each changed row of Status,
-  Messages, Inventory and the pop-up once, trimmed, standout between \x01/\x02, with its colour
-  and icon tile (`be_line`), plus the rows in use (`be_rows`, replaces `be_extent`); row colour and
-  icon via `wc_rowattr` (replaces `be_invfg`/`be_rowfg`), every cursor through `cursor()`. The page
-  shows `<pre class="txt">` / `.wm-list` rows (Inventory icons: CSS sprites from tiles.png); the
-  pop-up is a `<pre>` in `#pop` at the Messages size. Only the map is a canvas. Text panes lose
-  per-cell colours (row colour only); X11/terminal draw `be_line` per cell (no colour there now).
