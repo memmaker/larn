@@ -16,7 +16,6 @@ emcc -O2 -std=gnu99 -fcommon -DLARN_X11 -I. -Iport -w \
 	-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,HEAPU8,addRunDependency,removeRunDependency \
 	-sFORCE_FILESYSTEM -lidbfs.js -sENVIRONMENT=web \
 	--preload-file larnfiles@/larn/data
-(cd ~/Games/roguelikes-index/fonts 2>/dev/null && ls *.woff | sed "s/\.woff$//") | python3 -c "import json,sys; print(json.dumps(sys.stdin.read().split()))" > "$OUT/fonts.json"   # text fonts: the index page's fonts/
 cp web/index.html web/larn.js port/tiles.png "$OUT/"
 # sound effects, synthesized for the events raised by SOUND() in the game
 python3 web/mksounds.py "$OUT/sound"
